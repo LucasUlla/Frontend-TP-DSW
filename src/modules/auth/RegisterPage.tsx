@@ -121,13 +121,19 @@ export default function RegisterPage() {
         
         <div>
           <label className="block text-sm font-medium mb-1">N° Documento</label>
-          <input
-            className="w-full border rounded px-3 py-2"
-            {...register('doc', { required: 'Requerido' })}
-          />
-          {errors.doc && (
-            <p className="text-red-600 text-xs mt-1">{errors.doc.message}</p>
-          )}
+            <input
+              className="w-full border rounded px-3 py-2"
+              {...register('doc', {
+                required: 'Requerido',
+                pattern: {
+                  value: /^\d{7,8}$/,
+                  message: 'Debe contener solo números, entre 7 y 8 dígitos',
+                },
+              })}
+            />
+            {errors.doc && (
+              <p className="text-red-600 text-xs mt-1">{errors.doc.message}</p>
+            )}
         </div>
 
         <div>
