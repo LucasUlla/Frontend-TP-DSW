@@ -1,5 +1,5 @@
 import api from '../../shared/lib/axios'
-import type { Client, ApiResponse, TypeDoc } from '../../shared/types'
+import type { Client, ApiResponse } from '../../shared/types'
 
 interface LoginResponse {
   client: Client
@@ -14,7 +14,6 @@ export interface RegisterPayload {
   surname: string
   email: string
   doc: string
-  type_doc: TypeDoc
   password: string
   birth_date: string
   type_user: 'Socio'

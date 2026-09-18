@@ -4,14 +4,11 @@ import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
 import { registerRequest } from './auth.api'
 import type { RegisterPayload } from './auth.api'
-import type { TypeDoc } from '../../shared/types/index.ts'
-
 interface RegisterFormData {
   name: string
   surname: string
   email: string
   doc: string
-  type_doc: TypeDoc
   password: string
   confirmPassword: string
   birth_date: string
@@ -38,7 +35,6 @@ export default function RegisterPage() {
       surname: data.surname,
       email: data.email,
       doc: data.doc,
-      type_doc: data.type_doc,
       password: data.password,
       birth_date: data.birth_date,
       type_user: 'Socio',
@@ -123,35 +119,15 @@ export default function RegisterPage() {
           )}
         </div>
         
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm font-medium mb-1">Tipo de doc.</label>
-            <select
-              className="w-full border rounded px-3 py-2"
-              {...register('type_doc', { required: 'Requerido' })}
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Seleccionar...
-              </option>
-              <option value="DNI">DNI</option>
-              <option value="Pasaporte">Pasaporte</option>
-            </select>
-            {errors.type_doc && (
-              <p className="text-red-600 text-xs mt-1">{errors.type_doc.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">N° documento</label>
-            <input
-              className="w-full border rounded px-3 py-2"
-              {...register('doc', { required: 'Requerido' })}
-            />
-            {errors.doc && (
-              <p className="text-red-600 text-xs mt-1">{errors.doc.message}</p>
-            )}
-          </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">N° Documento</label>
+          <input
+            className="w-full border rounded px-3 py-2"
+            {...register('doc', { required: 'Requerido' })}
+          />
+          {errors.doc && (
+            <p className="text-red-600 text-xs mt-1">{errors.doc.message}</p>
+          )}
         </div>
 
         <div>
