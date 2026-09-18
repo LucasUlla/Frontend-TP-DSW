@@ -1,31 +1,34 @@
 import { create } from 'zustand'
 import type { Client } from '../../shared/types'
 
-//Plantilla de store
 interface AuthState {
   client: Client | null
   token: string | null
   isAuthenticated: boolean
-  setAuth: (client: Client, token: string) => void
+  setAuth: (client: Client, token?: string | null) => void
   logout: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => {
-  const storedToken = localStorage.getItem('token')
   const storedClient = localStorage.getItem('client')
+  const storedToken = localStorage.getItem('token')
 
   return {
     client: storedClient ? JSON.parse(storedClient) : null,
-    token: storedToken,
-    isAuthenticated: !!storedToken,
-    setAuth: (client, token) => {
-      localStorage.setItem('token', token)
+    token: storedToken || null,
+    isAuthenticated: !!storedClient || !!storedToken,
+    setAuth: (client, token = null) => {
       localStorage.setItem('client', JSON.stringify(client))
-      set({ client, token, isAuthenticated: true })
+      if (token) {
+        localStorage.setItem('token', token)
+      } else {
+        localStorage.removeItem('token')
+      }
+      set({ client, token: token || null, isAuthenticated: true })
     },
     logout: () => {
-      localStorage.removeItem('token')
       localStorage.removeItem('client')
+      localStorage.removeItem('token')
       set({ client: null, token: null, isAuthenticated: false })
     },
   }

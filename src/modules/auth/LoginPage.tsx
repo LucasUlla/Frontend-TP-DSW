@@ -25,15 +25,18 @@ export default function LoginPage() {
     setApiError(null)
     try {
       const res = await loginRequest(data.email, data.password)
-      const { client, token } = res.data.data
+      const dataResponse = res.data.data
+      const client = 'client' in dataResponse ? dataResponse.client : dataResponse
+      const token = 'token' in dataResponse ? dataResponse.token : null
+
       setAuth(client, token)
       navigate(client.type_user === 'Admin' ? '/admin' : '/socio')
     } catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 401) {
-        setApiError('Email o contraseña incorrectos')
-    } else {
-      setApiError('Error al iniciar sesión. Intentá de nuevo.')
-    }
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        setApiError('Email o contraseña incorrectas')
+      } else {
+        setApiError('Error al iniciar sesión. Intentá de nuevo.')
+      }
     }
   }
 

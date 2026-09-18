@@ -1,13 +1,15 @@
 import api from '../../shared/lib/axios'
 import type { Client, ApiResponse } from '../../shared/types'
 
-interface LoginResponse {
+export interface LoginWithToken {
   client: Client
   token: string
 }
 
+export type LoginData = LoginWithToken | Client
+
 export const loginRequest = (email: string, password: string) =>
-  api.post<ApiResponse<LoginResponse>>('/clients/login', { email, password })
+  api.post<ApiResponse<LoginData>>('/clients/login', { email, password })
 
 export interface RegisterPayload {
   name: string
