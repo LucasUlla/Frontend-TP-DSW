@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate, Link } from 'react-router-dom'
-import axios from 'axios'
+//import axios from 'axios'
 import { registerRequest } from './auth.api'
 import type { RegisterPayload } from './auth.api'
+import { getApiErrorMessage } from '../../shared/lib/api.Error.ts'
 interface RegisterFormData {
   name: string
   surname: string
@@ -44,24 +45,20 @@ export default function RegisterPage() {
       await registerRequest(payload)
       navigate('/login', { state: { registered: true } })
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const backendMessage: string = err.response?.data?.message ?? ''
+      const message = getApiErrorMessage(err, 'Error al registrarse. Intentá de nuevo.')
 
-        if (backendMessage.includes('Duplicate entry')) {
-          if (backendMessage.toLowerCase().includes('email')) {
-            setApiError('Ese email ya está registrado')
-          } else if (backendMessage.toLowerCase().includes('doc')) {
-            setApiError('Ese documento ya está registrado')
-          } else {
-            setApiError('Ya existe un cliente con esos datos')
-          }
-        } else {
-          setApiError('Error al registrarse. Intentá de nuevo.')
-        }
+      if (message.includes('Duplicate entry')) {
+      if (message.toLowerCase().includes('email')) {
+        setApiError('Ese email ya está registrado')
+      } else if (message.toLowerCase().includes('doc')) {
+        setApiError('Ese documento ya está registrado')
       } else {
-        setApiError('Error al registrarse. Intentá de nuevo.')
+        setApiError('Ya existe un cliente con esos datos')
       }
-    }
+      } else {
+          setApiError(message)
+        }
+      }
   }
 
   return (
