@@ -20,16 +20,22 @@ export default function MenuAdmin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50">
+
+      <header className="bg-blue-600 text-white mb-10 shadow-sm px-6 h-14 flex items-center justify-between">
+        <span className="font-semibold tracking-wide">Panel de administración</span>
+        <button
+          onClick={handleLogout}
+          className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1.5 rounded-md transition"
+        >
+          Cerrar sesión
+        </button>
+      </header>
+
+
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Panel de administración — {client?.name}</h1>
-          <button
-            onClick={handleLogout}
-            className="text-red-600 hover:underline"
-          >
-            Cerrar sesión
-          </button>
+          <h1 className="text-2xl font-bold">Menú principal</h1>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
