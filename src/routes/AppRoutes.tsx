@@ -4,6 +4,8 @@ import RegisterPage from '../modules/auth/RegisterPage'
 import ProtectedRoute from './ProtectedRoute'
 import MenuAdmin from '../features/menu/MenuAdmin.tsx'
 import MenuSocio from '../features/menu/MenuSocio.tsx'
+import ProfileSocio from '../features/socio/ProfileSocio.tsx'
+import SportsSocio from '../features/socio/SportsSocio.tsx'
 
 export default function AppRoutes() {
   return (
@@ -13,6 +15,8 @@ export default function AppRoutes() {
 
       <Route element={<ProtectedRoute allowedRoles={['Socio']} />}>
         <Route path="/socio" element={<MenuSocio />} />
+        <Route path="/socio/profile" element={<ProfileSocio />} />
+        <Route path="/socio/sports" element={<SportsSocio />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>

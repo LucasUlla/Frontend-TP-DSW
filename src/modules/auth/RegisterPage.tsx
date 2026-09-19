@@ -5,6 +5,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { registerRequest } from './auth.api'
 import type { RegisterPayload } from './auth.api'
 import { getApiErrorMessage } from '../../shared/lib/api.Error.ts'
+import { capitalize } from '../../shared/lib/formatters.ts'
 interface RegisterFormData {
   name: string
   surname: string
@@ -32,10 +33,11 @@ export default function RegisterPage() {
     setApiError(null)
 
     const payload: RegisterPayload = {
-      name: data.name,
-      surname: data.surname,
-      email: data.email,
-      doc: data.doc,
+      name: capitalize(data.name),
+      surname: capitalize(data.surname),
+      email: data.email.trim(),
+      doc: data.doc.trim(),
+      type_doc: 'DNI',
       password: data.password,
       birth_date: data.birth_date,
       type_user: 'Socio',

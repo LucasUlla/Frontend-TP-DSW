@@ -16,6 +16,7 @@ export interface RegisterPayload {
   surname: string
   email: string
   doc: string
+  type_doc: string
   password: string
   birth_date: string
   type_user: 'Socio'
