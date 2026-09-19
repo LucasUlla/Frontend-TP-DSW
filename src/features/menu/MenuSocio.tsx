@@ -4,6 +4,7 @@ import { useAuthStore } from '../../modules/auth/authStore.ts'
 const socioOptions = [
   { label: 'Ver deportes', path: '/socio/sports', description: 'Explorá los deportes disponibles' },
   { label: 'Ver cursos', path: '/socio/courses', description: 'Consultá los cursos del club' },
+  { label: 'Ver eventos', path: '/socio/events', description: 'Mirá los eventos disponibles' },
   { label: 'Mis inscripciones', path: '/socio/inscriptions', description: 'Revisá tus inscripciones activas' },
   { label: 'Mis cuotas', path: '/socio/fees', description: 'Consultá el estado de tus pagos' },
   { label: 'Mi perfil', path: '/socio/profile', description: 'Editá tus datos personales' },
@@ -21,7 +22,7 @@ export default function MenuSocio() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-blue-600 text-white mb-10 shadow-sm px-6 h-14 flex items-center justify-between">
-        <span className="font-semibold text-lg tracking-wide">Club Deportivo</span>
+        <span className="font-semibold tracking-wide">Club Deportivo</span>
         <button
           onClick={handleLogout}
           className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1.5 rounded-md transition"
