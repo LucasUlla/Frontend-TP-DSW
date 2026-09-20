@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../modules/auth/authStore.ts'
+import { useAuthStore } from '../auth/authStore.ts'
 
 const socioOptions = [
   { label: 'Ver deportes', path: '/socio/sports', description: 'Explorá los deportes disponibles' },

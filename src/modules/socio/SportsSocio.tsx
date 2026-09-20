@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../modules/auth/authStore'
+import { useAuthStore } from '../auth/authStore'
 import {
   getCourses,
   getInscriptionsByClient,

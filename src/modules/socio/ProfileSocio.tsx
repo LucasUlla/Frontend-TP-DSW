@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../modules/auth/authStore'
+import { useAuthStore } from '../auth/authStore'
 import { getInscriptionsByClient, getFeesByClient, updateClientProfile } from './socio.api'
 import { getApiErrorMessage } from '../../shared/lib/api.Error'
 import { capitalize } from '../../shared/lib/formatters'

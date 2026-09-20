@@ -2,10 +2,10 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from '../modules/auth/LoginPage'
 import RegisterPage from '../modules/auth/RegisterPage'
 import ProtectedRoute from './ProtectedRoute'
-import MenuAdmin from '../features/menu/MenuAdmin.tsx'
-import MenuSocio from '../features/menu/MenuSocio.tsx'
-import ProfileSocio from '../features/socio/ProfileSocio.tsx'
-import SportsSocio from '../features/socio/SportsSocio.tsx'
+import MenuAdmin from '../modules/menu/MenuAdmin.tsx'
+import MenuSocio from '../modules/menu/MenuSocio.tsx'
+import ProfileSocio from '../modules/socio/ProfileSocio.tsx'
+import SportsSocio from '../modules/socio/SportsSocio.tsx'
 
 export default function AppRoutes() {
   return (
