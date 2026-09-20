@@ -37,7 +37,6 @@ export default function RegisterPage() {
       surname: capitalize(data.surname),
       email: data.email.trim(),
       doc: data.doc.trim(),
-      type_doc: 'DNI',
       password: data.password,
       birth_date: data.birth_date,
       type_user: 'Socio',

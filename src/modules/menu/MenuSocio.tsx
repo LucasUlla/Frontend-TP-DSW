@@ -4,7 +4,6 @@ import { useAuthStore } from '../auth/authStore.ts'
 const socioOptions = [
   { label: 'Ver deportes', path: '/socio/sports', description: 'Explorá los deportes disponibles' },
   { label: 'Ver cursos', path: '/socio/courses', description: 'Consultá los cursos del club' },
-  { label: 'Ver eventos', path: '/socio/events', description: 'Mirá los eventos disponibles' },
   { label: 'Mis inscripciones', path: '/socio/inscriptions', description: 'Revisá tus inscripciones activas' },
   { label: 'Mis cuotas', path: '/socio/fees', description: 'Consultá el estado de tus pagos' },
   { label: 'Mi perfil', path: '/socio/profile', description: 'Editá tus datos personales' },

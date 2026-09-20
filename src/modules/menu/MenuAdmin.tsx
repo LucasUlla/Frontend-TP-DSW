@@ -12,7 +12,7 @@ const adminOptions = [
 
 export default function MenuAdmin() {
   const navigate = useNavigate()
-  const { client, logout } = useAuthStore()
+  const { logout } = useAuthStore()
 
   const handleLogout = () => {
     logout()

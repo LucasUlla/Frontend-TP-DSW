@@ -33,8 +33,14 @@ export default function LoginPage() {
       setAuth(client, token)
       navigate(client.type_user === 'Admin' ? '/admin' : '/socio')
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
-        setApiError('Email o contraseña incorrectas')
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 404) {
+          setApiError(err.response.data?.message || 'El usuario no existe')
+        } else if (err.response?.status === 401) {
+          setApiError(err.response.data?.message || 'Los datos ingresados son incorrectos')
+        } else {
+          setApiError(err.response?.data?.message || 'Error al iniciar sesión. Intentá de nuevo.')
+        }
       } else {
         setApiError('Error al iniciar sesión. Intentá de nuevo.')
       }
