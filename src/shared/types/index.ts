@@ -7,7 +7,6 @@ export interface Client {
   surname: string
   email: string
   doc: string
-  type_doc?: TipoDocumento | string
   birth_date: string
   type_user: TypeUser
   phone?: string

@@ -2,14 +2,10 @@ import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useAuthStore } from '../auth/authStore'
-import {
-  getSports,
-  createSport,
-  updateSport,
-  deleteSport,
-} from './admin.api'
+import { getSports, createSport, updateSport, deleteSport } from './admin.api'
 import { getApiErrorMessage } from '../../shared/lib/api.Error'
 import { capitalize } from '../../shared/lib/formatters'
+import { SVG_XMLNS } from '../../shared/constants'
 import type { Sport } from '../../shared/types'
 
 interface SportFormData {
@@ -33,17 +29,14 @@ export default function SportsAdmin() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
-  // Estados de modales
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingSport, setEditingSport] = useState<Sport | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Sport | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  // Alerta de éxito
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  // Forms de react-hook-form
   const {
     register: registerCreate,
     handleSubmit: handleSubmitCreate,
@@ -66,31 +59,43 @@ export default function SportsAdmin() {
     navigate('/login')
   }
 
-  const fetchSports = async () => {
+  // Usado por el botón "Reintentar"
+  const fetchSports = () => {
     setLoading(true)
     setError(null)
-    try {
-      const res = await getSports()
-      setSports(res.data.data || [])
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'No se pudieron cargar los deportes.'))
-    } finally {
-      setLoading(false)
-    }
+    getSports()
+      .then((res) => setSports(res.data.data || []))
+      .catch((err) => setError(getApiErrorMessage(err, 'No se pudieron cargar los deportes.')))
+      .finally(() => setLoading(false))
   }
 
-  useEffect(() => {
-    fetchSports()
-  }, [])
+  // Carga inicial — lógica inline en el efecto
 
-  // Filtrar deportes por búsqueda
+  useEffect(() => {
+  let ignore = false
+
+  getSports()
+    .then((res) => {
+      if (!ignore) setSports(res.data.data || [])
+    })
+    .catch((err) => {
+      if (!ignore) setError(getApiErrorMessage(err, 'No se pudieron cargar los deportes.'))
+    })
+    .finally(() => {
+      if (!ignore) setLoading(false)
+    })
+
+  return () => {
+    ignore = true
+  }
+}, [])
+
   const filteredSports = useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return sports
     return sports.filter((s) => s.name.toLowerCase().includes(query))
   }, [sports, search])
 
-  // Crear deporte (Alta)
   const onSubmitCreate = async (data: SportFormData) => {
     try {
       const trimmedName = data.name.trim()
@@ -107,22 +112,18 @@ export default function SportsAdmin() {
     }
   }
 
-  // Abrir modal de edición (Modificación)
   const handleOpenEdit = (sport: Sport) => {
     setEditingSport(sport)
     setValueEdit('name', sport.name)
   }
 
-  // Guardar cambios deporte (Modificación)
   const onSubmitEdit = async (data: SportFormData) => {
     if (!editingSport) return
     try {
       const trimmedName = data.name.trim()
       const res = await updateSport(editingSport.id, { name: trimmedName })
       const updated = res.data.data
-      setSports((prev) =>
-        prev.map((s) => (s.id === editingSport.id ? updated : s))
-      )
+      setSports((prev) => prev.map((s) => (s.id === editingSport.id ? updated : s)))
       setEditingSport(null)
       resetEdit()
       setSuccessMessage(`El deporte "${capitalize(updated.name)}" fue actualizado con éxito.`)
@@ -133,7 +134,6 @@ export default function SportsAdmin() {
     }
   }
 
-  // Eliminar deporte (Baja)
   const handleDelete = async () => {
     if (!deleteTarget) return
     setDeleteLoading(true)
@@ -153,18 +153,13 @@ export default function SportsAdmin() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header institucional consistente con ListaClientes */}
       <header className="bg-blue-600 text-white shadow-sm px-6 h-14 flex items-center justify-between">
         <button
           onClick={() => navigate('/admin')}
           className="flex items-center gap-2 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition"
           title="Volver al panel de administración"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-6 h-6 fill-current"
-            viewBox="0 0 24 24"
-          >
+          <svg xmlns={SVG_XMLNS} className="w-6 h-6 fill-current" viewBox="0 0 24 24">
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
           </svg>
           <span className="font-semibold text-sm hidden sm:inline">Menú Admin</span>
@@ -178,9 +173,7 @@ export default function SportsAdmin() {
         </button>
       </header>
 
-      {/* Contenido principal */}
       <main className="max-w-6xl w-full mx-auto px-4 py-8 flex-1 space-y-6">
-        {/* Título, botón de Alta y métrica */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Lista de Deportes</h1>
@@ -203,14 +196,7 @@ export default function SportsAdmin() {
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl transition shadow-xs flex items-center gap-2 text-sm"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
+              <svg xmlns={SVG_XMLNS} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
               <span>Nuevo Deporte</span>
@@ -218,7 +204,6 @@ export default function SportsAdmin() {
           </div>
         </div>
 
-        {/* Mensaje de éxito */}
         {successMessage && (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3 rounded-xl flex items-center justify-between shadow-xs">
             <span>{successMessage}</span>
@@ -231,11 +216,10 @@ export default function SportsAdmin() {
           </div>
         )}
 
-        {/* Barra de Búsqueda */}
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
           <div className="relative flex-1">
             <svg
-              xmlns="http://www.w3.org/2000/svg"
+              xmlns={SVG_XMLNS}
               className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
               fill="none"
               viewBox="0 0 24 24"
@@ -266,7 +250,6 @@ export default function SportsAdmin() {
           </div>
         </div>
 
-        {/* Estados: Loading, Error, Vacío */}
         {loading && (
           <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-xs">
             <p className="text-gray-500">Cargando lista de deportes...</p>
@@ -297,7 +280,6 @@ export default function SportsAdmin() {
           </div>
         )}
 
-        {/* Tabla de Deportes */}
         {!loading && !error && filteredSports.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
@@ -312,12 +294,10 @@ export default function SportsAdmin() {
                 <tbody className="divide-y divide-gray-200">
                   {filteredSports.map((sport) => (
                     <tr key={sport.id} className="hover:bg-gray-50/80 transition">
-                      {/* ID */}
                       <td className="px-6 py-4 font-mono text-gray-500 text-xs sm:text-sm">
                         #{sport.id}
                       </td>
 
-                      {/* Nombre con icono */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">
@@ -331,7 +311,6 @@ export default function SportsAdmin() {
                         </div>
                       </td>
 
-                      {/* Acciones */}
                       <td className="px-6 py-4 text-right whitespace-nowrap">
                         <div className="inline-flex items-center gap-2">
                           <button
@@ -360,7 +339,6 @@ export default function SportsAdmin() {
               </table>
             </div>
 
-            {/* Footer de la tabla */}
             <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex items-center justify-between">
               <span>
                 Mostrando <strong>{filteredSports.length}</strong> de <strong>{sports.length}</strong> deportes
@@ -370,7 +348,7 @@ export default function SportsAdmin() {
         )}
       </main>
 
-      {/* Modal de Alta: Nuevo Deporte */}
+      {/* Modal de Alta */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md p-6 space-y-5">
@@ -411,14 +389,8 @@ export default function SportsAdmin() {
                   }`}
                   {...registerCreate('name', {
                     required: 'El nombre es obligatorio',
-                    minLength: {
-                      value: 2,
-                      message: 'Debe tener al menos 2 caracteres',
-                    },
-                    maxLength: {
-                      value: 50,
-                      message: 'Máximo 50 caracteres',
-                    },
+                    minLength: { value: 2, message: 'Debe tener al menos 2 caracteres' },
+                    maxLength: { value: 50, message: 'Máximo 50 caracteres' },
                     validate: (value) =>
                       value.trim().length > 0 || 'El nombre no puede estar vacío',
                   })}
@@ -452,7 +424,7 @@ export default function SportsAdmin() {
         </div>
       )}
 
-      {/* Modal de Modificación: Editar Deporte */}
+      {/* Modal de Modificación */}
       {editingSport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md p-6 space-y-5">
@@ -493,14 +465,8 @@ export default function SportsAdmin() {
                   }`}
                   {...registerEdit('name', {
                     required: 'El nombre es obligatorio',
-                    minLength: {
-                      value: 2,
-                      message: 'Debe tener al menos 2 caracteres',
-                    },
-                    maxLength: {
-                      value: 50,
-                      message: 'Máximo 50 caracteres',
-                    },
+                    minLength: { value: 2, message: 'Debe tener al menos 2 caracteres' },
+                    maxLength: { value: 50, message: 'Máximo 50 caracteres' },
                     validate: (value) =>
                       value.trim().length > 0 || 'El nombre no puede estar vacío',
                   })}
@@ -534,20 +500,13 @@ export default function SportsAdmin() {
         </div>
       )}
 
-      {/* Modal de Baja: Confirmación de Eliminación */}
+      {/* Modal de Baja */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md p-6 space-y-5">
             <div className="flex items-center gap-3 text-red-600">
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
+                <svg xmlns={SVG_XMLNS} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -597,4 +556,3 @@ export default function SportsAdmin() {
     </div>
   )
 }
-

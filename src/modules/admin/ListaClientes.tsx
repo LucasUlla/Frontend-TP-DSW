@@ -4,6 +4,7 @@ import { useAuthStore } from '../auth/authStore'
 import { getClients, deleteClient } from './admin.api'
 import { getApiErrorMessage } from '../../shared/lib/api.Error'
 import { capitalize } from '../../shared/lib/formatters'
+import { SVG_XMLNS } from '../../shared/constants'
 import type { Client, TypeUser } from '../../shared/types'
 
 function formatDate(birthDateString?: string): string {
@@ -39,22 +40,37 @@ export default function ListaClientes() {
     navigate('/login')
   }
 
-  const fetchClients = async () => {
+  // Usado por el botón "Reintentar" — dispara el fetch manualmente
+  const fetchClients = () => {
     setLoading(true)
     setError(null)
-    try {
-      const res = await getClients()
-      setClients(res.data.data || [])
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'No se pudieron cargar los clientes.'))
-    } finally {
-      setLoading(false)
-    }
+    getClients()
+      .then((res) => setClients(res.data.data || []))
+      .catch((err) => setError(getApiErrorMessage(err, 'No se pudieron cargar los clientes.')))
+      .finally(() => setLoading(false))
   }
 
+  // Carga inicial — lógica inline en el efecto, con cleanup para evitar setState
+  // en un componente ya desmontado
+
   useEffect(() => {
-    fetchClients()
-  }, [])
+  let ignore = false
+
+  getClients()
+    .then((res) => {
+      if (!ignore) setClients(res.data.data || [])
+    })
+    .catch((err) => {
+      if (!ignore) setError(getApiErrorMessage(err, 'No se pudieron cargar los clientes.'))
+    })
+    .finally(() => {
+      if (!ignore) setLoading(false)
+    })
+
+  return () => {
+    ignore = true
+  }
+}, [])
 
   // Filtrar clientes por búsqueda y rol
   const filteredClients = useMemo(() => {
@@ -111,11 +127,7 @@ export default function ListaClientes() {
           className="flex items-center gap-2 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition"
           title="Volver al panel de administración"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="w-6 h-6 fill-current"
-            viewBox="0 0 24 24"
-          >
+          <svg xmlns={SVG_XMLNS} className="w-6 h-6 fill-current" viewBox="0 0 24 24">
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
           </svg>
           <span className="font-semibold text-sm hidden sm:inline">Menú Admin</span>
@@ -171,10 +183,9 @@ export default function ListaClientes() {
 
         {/* Barra de Filtros y Búsqueda */}
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-          {/* Input de Búsqueda */}
           <div className="relative flex-1">
             <svg
-              xmlns="http://www.w3.org/2000/svg"
+              xmlns={SVG_XMLNS}
               className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
               fill="none"
               viewBox="0 0 24 24"
@@ -204,7 +215,6 @@ export default function ListaClientes() {
             )}
           </div>
 
-          {/* Selector de Rol */}
           <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg self-start md:self-auto">
             <button
               type="button"
@@ -273,7 +283,7 @@ export default function ListaClientes() {
           </div>
         )}
 
-        {/* Tabla de Clientes (Desktop y Tablet) */}
+        {/* Tabla de Clientes */}
         {!loading && !error && filteredClients.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
@@ -293,7 +303,6 @@ export default function ListaClientes() {
 
                     return (
                       <tr key={client.id} className="hover:bg-gray-50/80 transition">
-                        {/* Nombre y Email */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">
@@ -313,17 +322,14 @@ export default function ListaClientes() {
                           </div>
                         </td>
 
-                        {/* Documento */}
                         <td className="px-6 py-4 font-mono text-gray-800 text-xs sm:text-sm">
                           {client.doc || '—'}
                         </td>
 
-                        {/* Fecha de nacimiento */}
                         <td className="px-6 py-4 text-xs sm:text-sm">
                           {formatDate(client.birth_date)}
                         </td>
 
-                        {/* Rol */}
                         <td className="px-6 py-4">
                           {client.type_user === 'Admin' ? (
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
@@ -336,7 +342,6 @@ export default function ListaClientes() {
                           )}
                         </td>
 
-                        {/* Acciones */}
                         <td className="px-6 py-4 text-right whitespace-nowrap">
                           <div className="inline-flex items-center gap-2">
                             <button
@@ -376,7 +381,6 @@ export default function ListaClientes() {
               </table>
             </div>
 
-            {/* Footer de la tabla */}
             <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex items-center justify-between">
               <span>
                 Mostrando <strong>{filteredClients.length}</strong> de <strong>{totalCount}</strong> clientes
@@ -436,18 +440,6 @@ export default function ListaClientes() {
                 <span className="text-gray-500">Fecha de Nacimiento</span>
                 <span className="font-medium text-gray-800">{formatDate(viewClient.birth_date)}</span>
               </div>
-              {viewClient.phone && (
-                <div className="flex justify-between py-1.5 border-b border-gray-100">
-                  <span className="text-gray-500">Teléfono</span>
-                  <span className="font-medium text-gray-800">{viewClient.phone}</span>
-                </div>
-              )}
-              {viewClient.address && (
-                <div className="flex justify-between py-1.5 border-b border-gray-100">
-                  <span className="text-gray-500">Dirección</span>
-                  <span className="font-medium text-gray-800">{viewClient.address}</span>
-                </div>
-              )}
             </div>
 
             <div className="pt-2">
@@ -469,14 +461,7 @@ export default function ListaClientes() {
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md p-6 space-y-5">
             <div className="flex items-center gap-3 text-red-600">
               <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
+                <svg xmlns={SVG_XMLNS} className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -528,4 +513,3 @@ export default function ListaClientes() {
     </div>
   )
 }
-

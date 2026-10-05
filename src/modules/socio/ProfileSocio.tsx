@@ -5,6 +5,7 @@ import { getInscriptionsByClient, getFeesByClient, updateClientProfile } from '.
 import { getApiErrorMessage } from '../../shared/lib/api.Error'
 import { capitalize } from '../../shared/lib/formatters'
 import type { Fee, Inscription } from '../../shared/types'
+import { SVG_XMLNS } from '../../shared/constants.ts'
 
 function calculateAge(birthDateString?: string): number | null {
   if (!birthDateString) return null
@@ -57,8 +58,6 @@ export default function ProfileSocio() {
   const [editForm, setEditForm] = useState({
     name: client?.name || '',
     surname: client?.surname || '',
-    phone: client?.phone || '',
-    address: client?.address || '',
     birth_date: client?.birth_date ? client.birth_date.split('T')[0] : '',
   })
   const [saveLoading, setSaveLoading] = useState(false)
@@ -97,49 +96,45 @@ export default function ProfileSocio() {
     setEditForm({
       name: client?.name || '',
       surname: client?.surname || '',
-      phone: client?.phone || '',
-      address: client?.address || '',
       birth_date: client?.birth_date ? client.birth_date.split('T')[0] : '',
     })
     setSaveError(null)
     setIsEditing(true)
   }
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!client?.id) return
+const handleSaveProfile = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (!client?.id || !token) return
 
-    setSaveLoading(true)
-    setSaveError(null)
+  setSaveLoading(true)
+  setSaveError(null)
 
-    const formattedName = capitalize(editForm.name)
-    const formattedSurname = capitalize(editForm.surname)
+  const formattedName = capitalize(editForm.name)
+  const formattedSurname = capitalize(editForm.surname)
 
-    try {
-      const res = await updateClientProfile(client.id, {
-        name: formattedName,
-        surname: formattedSurname,
-        birth_date: editForm.birth_date,
-      })
+  try {
+    const res = await updateClientProfile(client.id, {
+      name: formattedName,
+      surname: formattedSurname,
+      birth_date: editForm.birth_date,
+    })
 
-      const updatedClient = {
-        ...client,
-        ...res.data.data,
-        name: formattedName,
-        surname: formattedSurname,
-        phone: editForm.phone.trim(),
-        address: editForm.address.trim(),
-        birth_date: editForm.birth_date,
-      }
-
-      setAuth(updatedClient, token)
-      setIsEditing(false)
-    } catch (err: unknown) {
-      setSaveError(getApiErrorMessage(err, 'Error al guardar los cambios del perfil.'))
-    } finally {
-      setSaveLoading(false)
+    const updatedClient = {
+      ...client,
+      ...res.data.data,
+      name: formattedName,
+      surname: formattedSurname,
+      birth_date: editForm.birth_date,
     }
+
+    setAuth(updatedClient, token)
+    setIsEditing(false)
+  } catch (err: unknown) {
+    setSaveError(getApiErrorMessage(err, 'Error al guardar los cambios del perfil.'))
+  } finally {
+    setSaveLoading(false)
   }
+}
 
   const age = calculateAge(client?.birth_date)
   const hasPendingFees = fees.some((f) => !f.paid)
@@ -155,7 +150,7 @@ export default function ProfileSocio() {
         >
           {/* Home Icon */}
           <svg
-            xmlns="http://www.w3.org/2000/svg"
+            xmlns = {SVG_XMLNS}
             className="w-6 h-6 fill-current"
             viewBox="0 0 24 24"
           >
@@ -193,7 +188,7 @@ export default function ProfileSocio() {
                   title="Editar perfil"
                 >
                   <svg
-                    xmlns="http://www.w3.org/2000/svg"
+                    xmlns={SVG_XMLNS}
                     className="w-4 h-4"
                     fill="none"
                     viewBox="0 0 24 24"
@@ -214,10 +209,6 @@ export default function ProfileSocio() {
                 <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                   {client ? `${client.name} ${client.surname}` : 'Cargando...'}
                 </h1>
-                <p className="text-gray-700 text-base">
-                  <span className="font-semibold">Documento:</span>{' '}
-                  {client?.type_doc || 'DNI'} {client?.doc}
-                </p>
                 <p className="text-gray-700 text-base">
                   <span className="font-semibold">Núm. de socio:</span>{' '}
                   {client?.type_user === 'Socio' ? client.id : 'No es socio'}
@@ -247,14 +238,6 @@ export default function ProfileSocio() {
               <p>
                 <span className="font-semibold">Email:</span>{' '}
                 {client?.email || 'No registrado'}
-              </p>
-              <p>
-                <span className="font-semibold">Teléfono:</span>{' '}
-                {client?.phone || '+54 9 341-123456'}
-              </p>
-              <p>
-                <span className="font-semibold">Dirección:</span>{' '}
-                {client?.address || 'Cerrito 1234'}
               </p>
             </div>
 
@@ -396,36 +379,6 @@ export default function ProfileSocio() {
                   value={editForm.birth_date}
                   onChange={(e) =>
                     setEditForm({ ...editForm, birth_date: e.target.value })
-                  }
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Teléfono
-                </label>
-                <input
-                  type="text"
-                  placeholder="+54 9 341-123456"
-                  value={editForm.phone}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, phone: e.target.value })
-                  }
-                  className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Dirección
-                </label>
-                <input
-                  type="text"
-                  placeholder="Cerrito 1234"
-                  value={editForm.address}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, address: e.target.value })
                   }
                   className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                 />

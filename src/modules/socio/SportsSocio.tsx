@@ -6,8 +6,10 @@ import {
   getInscriptionsByClient,
   createInscription,
   deleteInscription,
+  getInscriptionsByCourse,
 } from './socio.api'
 import type { Course, Inscription } from '../../shared/types'
+import { SVG_XMLNS } from '../../shared/constants.ts'
 
 export default function SportsSocio() {
   const navigate = useNavigate()
@@ -25,29 +27,52 @@ export default function SportsSocio() {
     navigate('/login')
   }
 
-  useEffect(() => {
-    if (!client?.id) return
-    let isMounted = true
+  const [courseOccupancy, setCourseOccupancy] = useState<Record<number, number>>({})
 
-    Promise.allSettled([getCourses(), getInscriptionsByClient(client.id)]).then(
-      ([coursesRes, inscRes]) => {
-        if (!isMounted) return
-        if (coursesRes.status === 'fulfilled') {
-          setCourses(coursesRes.value.data.data || [])
-        } else {
-          setError('No se pudieron cargar los deportes.')
-        }
-        if (inscRes.status === 'fulfilled') {
-          setMyInscriptions(inscRes.value.data.data || [])
-        }
-        setLoading(false)
+useEffect(() => {
+  if (!client?.id) return
+  let isMounted = true
+
+  Promise.allSettled([getCourses(), getInscriptionsByClient(client.id)]).then(
+    async ([coursesRes, inscRes]) => {
+      if (!isMounted) return
+
+      let loadedCourses: Course[] = []
+      if (coursesRes.status === 'fulfilled') {
+        loadedCourses = coursesRes.value.data.data || []
+        setCourses(loadedCourses)
+      } else {
+        setError('No se pudieron cargar los deportes.')
       }
-    )
 
-    return () => {
-      isMounted = false
+      if (inscRes.status === 'fulfilled') {
+        setMyInscriptions(inscRes.value.data.data || [])
+      }
+
+      // Traemos la ocupación real de cada curso (todas las inscripciones, no solo las propias)
+      if (loadedCourses.length > 0) {
+        const occupancyResults = await Promise.allSettled(
+          loadedCourses.map((c) => getInscriptionsByCourse(c.id))
+        )
+        if (!isMounted) return
+
+        const occupancyMap: Record<number, number> = {}
+        occupancyResults.forEach((res, idx) => {
+          const courseId = loadedCourses[idx].id
+          occupancyMap[courseId] =
+            res.status === 'fulfilled' ? (res.value.data.data?.length ?? 0) : 0
+        })
+        setCourseOccupancy(occupancyMap)
+      }
+
+      setLoading(false)
     }
-  }, [client?.id])
+  )
+
+  return () => {
+    isMounted = false
+  }
+}, [client?.id])
 
   // IDs de cursos en los que ya está inscripto el socio
   const inscribedCourseIds = useMemo(
@@ -96,9 +121,10 @@ export default function SportsSocio() {
   }
 
   function isFull(course: Course): boolean {
-    const occupied = myInscriptions.filter((i) => i.course?.id === course.id).length
-    return course.quota > 0 && occupied >= course.quota
-  }
+  const occupied = courseOccupancy[course.id] ?? 0
+  return course.quota > 0 && occupied >= course.quota
+}
+
 
   const noResults = !loading && !error && groupedBySport.size === 0
 
@@ -112,7 +138,7 @@ export default function SportsSocio() {
           title="Volver al menú principal"
         >
           <svg
-            xmlns="http://www.w3.org/2000/svg"
+            xmlns = {SVG_XMLNS}
             className="w-6 h-6 fill-current"
             viewBox="0 0 24 24"
           >
@@ -136,7 +162,7 @@ export default function SportsSocio() {
         {/* Buscador */}
         <div className="relative">
           <svg
-            xmlns="http://www.w3.org/2000/svg"
+            xmlns= {SVG_XMLNS}
             className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
             fill="none"
             viewBox="0 0 24 24"
@@ -186,9 +212,7 @@ export default function SportsSocio() {
                 const isInscribed = inscribedCourseIds.has(course.id)
                 const full = isFull(course)
                 const isActing = actionLoading === course.id
-                const cupoOcupado = myInscriptions.filter(
-                  (i) => i.course?.id === course.id
-                ).length
+                const cupoOcupado = courseOccupancy[course.id] ?? 0
                 const cupoTotal = course.quota
                 const pct = cupoTotal > 0 ? Math.min((cupoOcupado / cupoTotal) * 100, 100) : 0
 
