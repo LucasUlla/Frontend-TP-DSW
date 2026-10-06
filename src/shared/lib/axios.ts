@@ -3,7 +3,7 @@ import { useAuthStore } from '../../modules/auth/authStore'
 
 //Creo instancia base de axios para usarla en la app
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_URL,
 })
 
 //Interceptor de request para agregar el token de autenticación a cada solicitud
