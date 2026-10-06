@@ -46,6 +46,17 @@ export interface Fee {
   generated_at?: string
 }
 
+export interface Course {
+  id: number
+  course_no: number
+  sched: string
+  professor: string
+  start_date: string
+  finish_date: string
+  quota: number
+  sport?: Sport
+}
+
 export interface ApiResponse<T> {
   message: string
   data: T
