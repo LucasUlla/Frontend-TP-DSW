@@ -35,7 +35,7 @@ export default function MenuSocio() {
 
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {socioOptions.map((option) => (
             <button
               key={option.path}

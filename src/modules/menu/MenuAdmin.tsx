@@ -38,7 +38,7 @@ export default function MenuAdmin() {
           <h1 className="text-2xl font-bold">Menú principal</h1>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {adminOptions.map((option) => (
             <button
               key={option.path}

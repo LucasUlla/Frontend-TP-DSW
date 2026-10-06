@@ -174,7 +174,7 @@ export default function SportsAdmin() {
         </button>
       </header>
 
-      <main className="max-w-6xl w-full mx-auto px-4 py-8 flex-1 space-y-6">
+      <main className="max-w-6xl w-full mx-auto px-4 lg:px-8 py-8 flex-1 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Lista de Deportes</h1>

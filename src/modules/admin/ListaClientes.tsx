@@ -143,7 +143,7 @@ export default function ListaClientes() {
       </header>
 
       {/* Contenido principal */}
-      <main className="max-w-6xl w-full mx-auto px-4 py-8 flex-1 space-y-6">
+      <main className="max-w-6xl w-full mx-auto px-4 lg:px-8 py-8 flex-1 space-y-6">
         {/* Título y estadísticas rápidas */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
