@@ -26,12 +26,12 @@ interface CourseFormData {
   sport: number
 }
 
-function parseCourseErrorMessage(err: unknown, fallback: string): string {
+function parseCourseErrorMessage(err: unknown, fallback: string): { message: string; field?: 'course_no' } {
   const msg = getApiErrorMessage(err, fallback)
   if (msg.toLowerCase().includes('duplicate entry')) {
-    return 'Ya existe un dictado con ese número de curso.'
+    return { message: 'Ya existe un dictado con ese número de curso.', field: 'course_no' }
   }
-  return msg
+  return { message: msg }
 }
 
 function formatDate(dateString?: string): string {
@@ -61,6 +61,12 @@ export default function CoursesAdmin() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  //errores
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [editError, setEditError] = useState<string | null>(null)
+
+    
 
   const {
     register: registerCreate,
@@ -144,22 +150,24 @@ export default function CoursesAdmin() {
   })
 
   const onSubmitCreate = async (data: CourseFormData) => {
+  setCreateError(null)
   try {
     const payload = buildPayload(data)
     const res = await createCourse(payload)
     const matchingSport = sports.find((s) => s.id === payload.sport)
-    const newCourse: Course = {
-      ...res.data.data,
-      sport: matchingSport || res.data.data.sport,
-    }
+    const newCourse: Course = { ...res.data.data, sport: matchingSport || res.data.data.sport }
     setCourses((prev) => [...prev, newCourse])
     setIsCreateOpen(false)
     resetCreate()
     setSuccessMessage(`El dictado #${newCourse.course_no} fue creado con éxito.`)
     setTimeout(() => setSuccessMessage(null), 4000)
   } catch (err) {
-    const msg = parseCourseErrorMessage(err, 'Error al crear el dictado.')
-    setErrorCreate('course_no', { type: 'server', message: msg })
+    const { message, field } = parseCourseErrorMessage(err, 'Error al crear el dictado.')
+    if (field) {
+      setErrorCreate(field, { type: 'server', message })
+    } else {
+      setCreateError(message)
+    }
   }
 }
 
@@ -192,8 +200,12 @@ export default function CoursesAdmin() {
     setSuccessMessage(`El dictado #${updated.course_no} fue actualizado con éxito.`)
     setTimeout(() => setSuccessMessage(null), 4000)
   } catch (err) {
-    const msg = parseCourseErrorMessage(err, 'Error al actualizar el dictado.')
-    setErrorEdit('course_no', { type: 'server', message: msg })
+    const { message, field } = parseCourseErrorMessage(err, 'Error al actualizar el dictado.')
+    if (field) {
+      setErrorEdit(field, { type: 'server', message })
+    } else {
+      setEditError(message)
+    }
   }
 }
 
@@ -552,6 +564,7 @@ export default function CoursesAdmin() {
                 type="button"
                 onClick={() => {
                   setIsCreateOpen(false)
+                  setCreateError(null)
                   resetCreate()
                 }}
                 className="text-gray-400 hover:text-gray-600 rounded-lg p-1.5 hover:bg-gray-100 transition"
@@ -561,6 +574,11 @@ export default function CoursesAdmin() {
             </div>
 
             <form onSubmit={handleSubmitCreate(onSubmitCreate)} className="space-y-4" noValidate>
+              {createError && (
+                <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg border border-red-200">
+                {createError}
+                </div>
+              )} 
               {renderFormFields(registerCreate, errorsCreate)}
 
               <div className="flex gap-3 pt-2">
@@ -568,6 +586,7 @@ export default function CoursesAdmin() {
                   type="button"
                   onClick={() => {
                     setIsCreateOpen(false)
+                    setCreateError(null)
                     resetCreate()
                   }}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-xl text-sm transition"
@@ -597,6 +616,7 @@ export default function CoursesAdmin() {
                 type="button"
                 onClick={() => {
                   setEditingCourse(null)
+                  setCreateError(null)
                   resetEdit()
                 }}
                 className="text-gray-400 hover:text-gray-600 rounded-lg p-1.5 hover:bg-gray-100 transition"
@@ -606,6 +626,11 @@ export default function CoursesAdmin() {
             </div>
 
             <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="space-y-4" noValidate>
+                {editError && (
+                    <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg border border-red-200">
+                    {editError}
+                    </div> 
+                )} 
               {renderFormFields(registerEdit, errorsEdit)}
 
               <div className="flex gap-3 pt-2">
@@ -613,6 +638,7 @@ export default function CoursesAdmin() {
                   type="button"
                   onClick={() => {
                     setEditingCourse(null)
+                    setCreateError(null)
                     resetEdit()
                   }}
                   className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-xl text-sm transition"
