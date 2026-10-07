@@ -1,6 +1,15 @@
 export type TypeUser = 'Admin' | 'Socio'
-export type TipoDocumento = 'DNI' | 'Pasaporte'
+export const WEEKDAYS = [
+  'Lunes',
+  'Martes',
+  'Miercoles',
+  'Jueves',
+  'Viernes',
+  'Sabado',
+  'Domingo',
+] as const
 
+export type Weekday = (typeof WEEKDAYS)[number]
 export interface Client {
   id: number
   name: string
@@ -21,7 +30,9 @@ export interface Sport {
 export interface Course {
   id: number
   course_no: number
-  sched: string
+  days: Weekday[]
+  start_time: string // "HH:MM"
+  end_time: string // "HH:MM"
   professor: string
   start_date: string
   finish_date: string

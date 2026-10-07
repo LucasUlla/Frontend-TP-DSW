@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../auth/authStore'
 import { getInscriptionsByClient, getFeesByClient, updateClientProfile } from './socio.api'
 import { getApiErrorMessage } from '../../shared/lib/api.Error'
-import { capitalize } from '../../shared/lib/formatters'
+import { capitalize, formatSchedule } from '../../shared/lib/formatters'
 import type { Fee, Inscription } from '../../shared/types'
 import { SVG_XMLNS } from '../../shared/constants.ts'
 
@@ -302,7 +302,7 @@ const handleSaveProfile = async (e: React.FormEvent) => {
                       </h3>
                       <p className="text-sm text-gray-600 mt-1">
                         <span className="font-medium">Horarios:</span>{' '}
-                        {insc.course?.sched}
+                        {formatSchedule(insc.course.days, insc.course.start_time, insc.course.end_time)}
                       </p>
                       <p className="text-sm text-gray-600 mt-0.5">
                         <span className="font-medium">Profesor/a:</span>{' '}

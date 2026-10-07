@@ -15,10 +15,15 @@ import { capitalize } from '../../shared/lib/formatters'
 import { SVG_XMLNS } from '../../shared/constants'
 import ConfirmModal from '../../shared/components/ConfirmModal'
 import type { Course, Sport } from '../../shared/types'
+import { WEEKDAYS } from '../../shared/types'
+import type { Weekday } from '../../shared/types'
+import { formatSchedule } from '../../shared/lib/formatters'
 
 interface CourseFormData {
   course_no: number
-  sched: string
+  days: Weekday[]
+  start_time: string
+  end_time: string
   professor: string
   start_date: string
   finish_date: string
@@ -69,19 +74,21 @@ export default function CoursesAdmin() {
     
 
   const {
-    register: registerCreate,
-    handleSubmit: handleSubmitCreate,
-    reset: resetCreate,
-    formState: { errors: errorsCreate, isSubmitting: isSubmittingCreate },
-    setError: setErrorCreate,
+  register: registerCreate,
+  handleSubmit: handleSubmitCreate,
+  reset: resetCreate,
+  watch: watchCreate,
+  formState: { errors: errorsCreate, isSubmitting: isSubmittingCreate },
+  setError: setErrorCreate,
   } = useForm<CourseFormData>()
 
-  const {
-    register: registerEdit,
-    handleSubmit: handleSubmitEdit,
-    reset: resetEdit,
-    formState: { errors: errorsEdit, isSubmitting: isSubmittingEdit },
-    setError: setErrorEdit,
+const {
+  register: registerEdit,
+  handleSubmit: handleSubmitEdit,
+  reset: resetEdit,
+  watch: watchEdit,
+  formState: { errors: errorsEdit, isSubmitting: isSubmittingEdit },
+  setError: setErrorEdit,
   } = useForm<CourseFormData>()
 
   const handleLogout = () => {
@@ -140,14 +147,16 @@ export default function CoursesAdmin() {
   }, [courses, search, sportFilter])
 
   const buildPayload = (data: CourseFormData): CoursePayload => ({
-    course_no: Number(data.course_no),
-    sched: data.sched.trim(),
-    professor: data.professor.trim(),
-    start_date: data.start_date,
-    finish_date: data.finish_date,
-    quota: Number(data.quota),
-    sport: Number(data.sport),
-  })
+  course_no: Number(data.course_no),
+  days: data.days,
+  start_time: data.start_time,
+  end_time: data.end_time,
+  professor: data.professor.trim(),
+  start_date: data.start_date,
+  finish_date: data.finish_date,
+  quota: Number(data.quota),
+  sport: Number(data.sport),
+})
 
   const onSubmitCreate = async (data: CourseFormData) => {
   setCreateError(null)
@@ -172,17 +181,19 @@ export default function CoursesAdmin() {
 }
 
   const handleOpenEdit = (course: Course) => {
-    setEditingCourse(course)
-    resetEdit({
-      course_no: course.course_no,
-      sched: course.sched,
-      professor: course.professor,
-      start_date: course.start_date.split('T')[0],
-      finish_date: course.finish_date.split('T')[0],
-      quota: course.quota,
-      sport: course.sport?.id,
-    })
-  }
+  setEditingCourse(course)
+  resetEdit({
+    course_no: course.course_no,
+    days: course.days,
+    start_time: course.start_time,
+    end_time: course.end_time,
+    professor: course.professor,
+    start_date: course.start_date.split('T')[0],
+    finish_date: course.finish_date.split('T')[0],
+    quota: course.quota,
+    sport: course.sport?.id,
+  })
+}
 
   const onSubmitEdit = async (data: CourseFormData) => {
   if (!editingCourse) return
@@ -229,7 +240,8 @@ export default function CoursesAdmin() {
   // Formulario compartido entre Alta y Modificación (mismos campos, distinto register/errors)
   function renderFormFields(
     register: typeof registerCreate,
-    errors: typeof errorsCreate
+    errors: typeof errorsCreate,
+    watch: typeof watchCreate
   ) {
     return (
       <>
@@ -303,17 +315,55 @@ export default function CoursesAdmin() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Horario *</label>
-          <input
-            type="text"
-            placeholder="Ej: Lunes y Miércoles 18:00 a 19:30"
-            className={`w-full border rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 transition ${
-              errors.sched ? 'border-red-500 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500'
-            }`}
-            {...register('sched', { required: 'Requerido' })}
-          />
-          {errors.sched && <p className="text-red-600 text-xs mt-1">{errors.sched.message}</p>}
+          <label className="block text-sm font-medium text-gray-700 mb-2">Días *</label>
+          <div className="flex flex-wrap gap-2">
+            {WEEKDAYS.map((day) => (
+              <label
+                key={day}
+                className="flex items-center gap-1.5 border border-gray-200 rounded-lg px-3 py-1.5 text-sm cursor-pointer hover:bg-gray-50 has-checked:bg-blue-50 has-checked:border-blue-400 has-checked:text-blue-700 transition"
+              >
+                <input
+                  type="checkbox"
+                  value={day}
+                  className="accent-blue-600"
+                  {...register('days', { required: 'Seleccioná al menos un día' })}
+                />
+                {day}
+              </label>
+            ))}
+          </div>
+          {errors.days && <p className="text-red-600 text-xs mt-1">{errors.days.message}</p>}
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hora de inicio *</label>
+            <input
+              type="time"
+              className={`w-full border rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 transition ${
+                errors.start_time ? 'border-red-500 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500'
+              }`}
+              {...register('start_time', { required: 'Requerido' })}
+            />
+            {errors.start_time && <p className="text-red-600 text-xs mt-1">{errors.start_time.message}</p>}
+          </div>
+
+        <div>
+    <label className="block text-sm font-medium text-gray-700 mb-1">Hora de fin *</label>
+    <input
+      type="time"
+      className={`w-full border rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 transition ${
+        errors.end_time ? 'border-red-500 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500'
+      }`}
+      {...register('end_time', {
+        required: 'Requerido',
+        validate: (value) =>
+          !watch('start_time') || value > watch('start_time') || 'Debe ser posterior a la hora de inicio',
+      })}
+    />
+    {errors.end_time && <p className="text-red-600 text-xs mt-1">{errors.end_time.message}</p>}
+  </div>
+</div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -513,7 +563,9 @@ export default function CoursesAdmin() {
                         </span>
                       </td>
                       <td className="px-6 py-4">{course.professor}</td>
-                      <td className="px-6 py-4 text-xs sm:text-sm">{course.sched}</td>
+                      <td className="px-6 py-4 text-xs sm:text-sm">
+                        {formatSchedule(course.days, course.start_time, course.end_time)}
+                      </td>
                       <td className="px-6 py-4 text-xs sm:text-sm">
                         {formatDate(course.start_date)} — {formatDate(course.finish_date)}
                       </td>
@@ -579,7 +631,7 @@ export default function CoursesAdmin() {
                 {createError}
                 </div>
               )} 
-              {renderFormFields(registerCreate, errorsCreate)}
+              {renderFormFields(registerCreate, errorsCreate, watchCreate)}
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -631,7 +683,7 @@ export default function CoursesAdmin() {
                     {editError}
                     </div> 
                 )} 
-              {renderFormFields(registerEdit, errorsEdit)}
+              {renderFormFields(registerEdit, errorsEdit, watchEdit)}
 
               <div className="flex gap-3 pt-2">
                 <button

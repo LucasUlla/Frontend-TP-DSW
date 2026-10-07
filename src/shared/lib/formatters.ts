@@ -12,3 +12,8 @@ export function capitalize(str: string): string {
     .join(' ')
 }
 
+export function formatSchedule(days: string[], startTime: string, endTime: string): string {
+  if (!days || days.length === 0) return '—'
+  return `${days.join(' y ')} de ${startTime} a ${endTime}`
+}
+

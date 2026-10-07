@@ -10,6 +10,7 @@ import {
 } from './socio.api'
 import type { Course, Inscription } from '../../shared/types'
 import { SVG_XMLNS } from '../../shared/constants.ts'
+import { formatSchedule } from '../../shared/lib/formatters.ts'
 
 export default function SportsSocio() {
   const navigate = useNavigate()
@@ -244,7 +245,7 @@ useEffect(() => {
                       </div>
 
                       <p className="text-sm text-gray-600">
-                        <span className="font-medium">Horario:</span> {course.sched}
+                        <span className="font-medium">Horario:</span> {formatSchedule(course.days, course.start_time, course.end_time)}
                       </p>
                       <p className="text-sm text-gray-600">
                         <span className="font-medium">Profesor/a:</span> {course.professor}
