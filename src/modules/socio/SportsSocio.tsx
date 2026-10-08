@@ -1,16 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../auth/authStore'
-import {
-  getCourses,
-  getInscriptionsByClient,
-  createInscription,
-  deleteInscription,
-  getInscriptionsByCourse,
-} from './socio.api'
+import { getCourses, getInscriptionsByClient, createInscription, deleteInscription } from './socio.api'
+import { getApiErrorMessage } from '../../shared/lib/api.Error'
+import { capitalize, formatSchedule } from '../../shared/lib/formatters'
+import { SVG_XMLNS } from '../../shared/constants'
 import type { Course, Inscription } from '../../shared/types'
-import { SVG_XMLNS } from '../../shared/constants.ts'
-import { formatSchedule } from '../../shared/lib/formatters.ts'
 
 export default function SportsSocio() {
   const navigate = useNavigate()
@@ -22,66 +17,46 @@ export default function SportsSocio() {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [actionLoading, setActionLoading] = useState<number | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const handleLogout = () => {
     logout()
     navigate('/login')
   }
 
-  const [courseOccupancy, setCourseOccupancy] = useState<Record<number, number>>({})
+  // Carga inicial: cursos (ya con inscriptionsCount) + inscripciones propias
+  useEffect(() => {
+    if (!client?.id) return
+    let ignore = false
 
-useEffect(() => {
-  if (!client?.id) return
-  let isMounted = true
+    Promise.allSettled([getCourses(), getInscriptionsByClient(client.id)]).then(
+      ([coursesRes, inscRes]) => {
+        if (ignore) return
 
-  Promise.allSettled([getCourses(), getInscriptionsByClient(client.id)]).then(
-    async ([coursesRes, inscRes]) => {
-      if (!isMounted) return
+        if (coursesRes.status === 'fulfilled') {
+          setCourses(coursesRes.value.data.data || [])
+        } else {
+          setError('No se pudieron cargar los deportes.')
+        }
 
-      let loadedCourses: Course[] = []
-      if (coursesRes.status === 'fulfilled') {
-        loadedCourses = coursesRes.value.data.data || []
-        setCourses(loadedCourses)
-      } else {
-        setError('No se pudieron cargar los deportes.')
+        if (inscRes.status === 'fulfilled') {
+          setMyInscriptions(inscRes.value.data.data || [])
+        }
+
+        setLoading(false)
       }
+    )
 
-      if (inscRes.status === 'fulfilled') {
-        setMyInscriptions(inscRes.value.data.data || [])
-      }
-
-      // Traemos la ocupación real de cada curso (todas las inscripciones, no solo las propias)
-      if (loadedCourses.length > 0) {
-        const occupancyResults = await Promise.allSettled(
-          loadedCourses.map((c) => getInscriptionsByCourse(c.id))
-        )
-        if (!isMounted) return
-
-        const occupancyMap: Record<number, number> = {}
-        occupancyResults.forEach((res, idx) => {
-          const courseId = loadedCourses[idx].id
-          occupancyMap[courseId] =
-            res.status === 'fulfilled' ? (res.value.data.data?.length ?? 0) : 0
-        })
-        setCourseOccupancy(occupancyMap)
-      }
-
-      setLoading(false)
+    return () => {
+      ignore = true
     }
-  )
+  }, [client?.id])
 
-  return () => {
-    isMounted = false
-  }
-}, [client?.id])
-
-  // IDs de cursos en los que ya está inscripto el socio
   const inscribedCourseIds = useMemo(
     () => new Set(myInscriptions.map((i) => i.course?.id)),
     [myInscriptions]
   )
 
-  // Agrupar cursos por deporte (filtrado por búsqueda)
   const groupedBySport = useMemo(() => {
     const filtered = courses.filter((c) =>
       (c.sport?.name || '').toLowerCase().includes(search.toLowerCase())
@@ -98,11 +73,17 @@ useEffect(() => {
   const handleInscribirse = async (course: Course) => {
     if (!client?.id) return
     setActionLoading(course.id)
+    setActionError(null)
     try {
       const res = await createInscription(course.id, client.id)
       setMyInscriptions((prev) => [...prev, res.data.data])
-    } catch {
-      // El backend valida cupo y duplicados; ignorar silenciosamente en el cliente
+      // Actualización optimista del contador, igual que antes, pero ahora
+      // vive adentro del objeto Course en vez de un estado aparte
+      setCourses((prev) =>
+        prev.map((c) => (c.id === course.id ? { ...c, inscriptionsCount: c.inscriptionsCount + 1 } : c))
+      )
+    } catch (err) {
+      setActionError(getApiErrorMessage(err, 'No se pudo completar la inscripción.'))
     } finally {
       setActionLoading(null)
     }
@@ -111,38 +92,37 @@ useEffect(() => {
   const handleDesinscribirse = async (course: Course) => {
     if (!client?.id) return
     setActionLoading(course.id)
+    setActionError(null)
     try {
       await deleteInscription(course.id, client.id)
       setMyInscriptions((prev) => prev.filter((i) => i.course?.id !== course.id))
-    } catch {
-      // Ignorar
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.id === course.id ? { ...c, inscriptionsCount: Math.max(c.inscriptionsCount - 1, 0) } : c
+        )
+      )
+    } catch (err) {
+      setActionError(getApiErrorMessage(err, 'No se pudo cancelar la inscripción.'))
     } finally {
       setActionLoading(null)
     }
   }
 
   function isFull(course: Course): boolean {
-  const occupied = courseOccupancy[course.id] ?? 0
-  return course.quota > 0 && occupied >= course.quota
-}
-
+    return course.quota > 0 && course.inscriptionsCount >= course.quota
+  }
 
   const noResults = !loading && !error && groupedBySport.size === 0
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
       <header className="bg-blue-600 text-white shadow-sm px-6 h-14 flex items-center justify-between">
         <button
           onClick={() => navigate('/socio')}
           className="flex items-center gap-2 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition"
           title="Volver al menú principal"
         >
-          <svg
-            xmlns = {SVG_XMLNS}
-            className="w-6 h-6 fill-current"
-            viewBox="0 0 24 24"
-          >
+          <svg xmlns={SVG_XMLNS} className="w-6 h-6 fill-current" viewBox="0 0 24 24">
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
           </svg>
           <span className="font-semibold text-sm hidden sm:inline">Menú Socio</span>
@@ -158,12 +138,22 @@ useEffect(() => {
         </button>
       </header>
 
-      {/* Contenido */}
       <main className="max-w-3xl w-full mx-auto px-4 py-8 flex-1 space-y-6">
-        {/* Buscador */}
+        {actionError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex items-center justify-between shadow-xs">
+            <span>{actionError}</span>
+            <button
+              onClick={() => setActionError(null)}
+              className="text-red-700 hover:text-red-900 font-bold ml-4 shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <div className="relative">
           <svg
-            xmlns= {SVG_XMLNS}
+            xmlns={SVG_XMLNS}
             className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
             fill="none"
             viewBox="0 0 24 24"
@@ -185,35 +175,27 @@ useEffect(() => {
           />
         </div>
 
-        {/* Estados: loading / error / sin resultados */}
-        {loading && (
-          <p className="text-center text-gray-500 py-16">Cargando deportes...</p>
-        )}
-        {error && !loading && (
-          <p className="text-center text-red-600 py-16">{error}</p>
-        )}
+        {loading && <p className="text-center text-gray-500 py-16">Cargando deportes...</p>}
+        {error && !loading && <p className="text-center text-red-600 py-16">{error}</p>}
         {noResults && (
           <p className="text-center text-gray-500 py-16">
             No hay deportes que coincidan con tu búsqueda.
           </p>
         )}
 
-        {/* Lista agrupada por deporte */}
         {!loading &&
           !error &&
           Array.from(groupedBySport.entries()).map(([sportName, sportCourses]) => (
             <section key={sportName} className="space-y-3">
-              {/* Nombre del deporte como separador de sección */}
               <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-400 px-1">
-                {sportName}
+                {capitalize(sportName)}
               </h2>
 
-              {/* Tarjetas de cursos */}
               {sportCourses.map((course) => {
                 const isInscribed = inscribedCourseIds.has(course.id)
                 const full = isFull(course)
                 const isActing = actionLoading === course.id
-                const cupoOcupado = courseOccupancy[course.id] ?? 0
+                const cupoOcupado = course.inscriptionsCount
                 const cupoTotal = course.quota
                 const pct = cupoTotal > 0 ? Math.min((cupoOcupado / cupoTotal) * 100, 100) : 0
 
@@ -226,7 +208,6 @@ useEffect(() => {
                         : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
                     }`}
                   >
-                    {/* Info del curso */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-0.5">
                         <p className="font-semibold text-gray-900 text-base">
@@ -245,21 +226,17 @@ useEffect(() => {
                       </div>
 
                       <p className="text-sm text-gray-600">
-                        <span className="font-medium">Horario:</span> {formatSchedule(course.days, course.start_time, course.end_time)}
+                        <span className="font-medium">Horario:</span>{' '}
+                        {formatSchedule(course.days, course.start_time, course.end_time)}
                       </p>
                       <p className="text-sm text-gray-600">
                         <span className="font-medium">Profesor/a:</span> {course.professor}
                       </p>
 
-                      {/* Barra de cupo */}
                       <div className="mt-3">
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-xs text-gray-400">Cupo disponible</span>
-                          <span
-                            className={`text-xs font-semibold ${
-                              full ? 'text-red-500' : 'text-gray-600'
-                            }`}
-                          >
+                          <span className={`text-xs font-semibold ${full ? 'text-red-500' : 'text-gray-600'}`}>
                             {cupoOcupado} / {cupoTotal}
                           </span>
                         </div>
@@ -274,7 +251,6 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Botón de acción */}
                     <div className="shrink-0">
                       {isInscribed ? (
                         <button
@@ -303,4 +279,3 @@ useEffect(() => {
     </div>
   )
 }
-

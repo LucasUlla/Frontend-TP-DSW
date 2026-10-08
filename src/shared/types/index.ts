@@ -38,11 +38,12 @@ export interface Course {
   finish_date: string
   quota: number
   sport?: Sport
+  inscriptionsCount: number //Por ahora solo viene en el getAllCourses
 }
 
 export interface Inscription {
   course: Course
-  client: Client | number
+  client: Client
   insc_date?: string
 }
 

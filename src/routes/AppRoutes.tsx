@@ -9,6 +9,7 @@ import SportsSocio from '../modules/socio/SportsSocio.tsx'
 import ListaClientes from '../modules/admin/ListaClientes.tsx'
 import SportsAdmin from '../modules/admin/SportsAdmin.tsx'
 import CoursesAdmin from '../modules/admin/CoursesAdmin.tsx'
+import InscriptionsAdmin from '../modules/admin/InscriptionsAdmin.tsx'
 
 export default function AppRoutes() {
   return (
@@ -27,6 +28,7 @@ export default function AppRoutes() {
         <Route path="/admin/clients" element={<ListaClientes />} />
         <Route path="/admin/sports" element={<SportsAdmin />} />
         <Route path="/admin/courses" element={<CoursesAdmin />} />
+        <Route path="/admin/inscriptions" element={<InscriptionsAdmin />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/login" replace />} />
