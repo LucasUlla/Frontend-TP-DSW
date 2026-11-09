@@ -1,24 +1,15 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../auth/authStore'
 import { getSports } from './socio.api'
 import { capitalize } from '../../shared/lib/formatters'
-import { SVG_XMLNS } from '../../shared/constants'
+import SocioHeader from '../../shared/components/SocioHeader'
+import SearchInput from '../../shared/components/SearchInput'
 import type { Sport } from '../../shared/types'
 
 export default function SportsSocio() {
-  const navigate = useNavigate()
-  const { logout } = useAuthStore()
-
   const [sports, setSports] = useState<Sport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
 
   useEffect(() => {
     let ignore = false
@@ -51,52 +42,14 @@ export default function SportsSocio() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-blue-600 text-white shadow-sm px-6 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate('/socio')}
-          className="flex items-center gap-2 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition"
-          title="Volver al menú principal"
-        >
-          <svg xmlns={SVG_XMLNS} className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-          </svg>
-          <span className="font-semibold text-sm hidden sm:inline">Menú Socio</span>
-        </button>
-
-        <span className="font-semibold text-lg tracking-wide">Deportes del club</span>
-
-        <button
-          onClick={handleLogout}
-          className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1.5 rounded-md transition"
-        >
-          Cerrar sesión
-        </button>
-      </header>
+      <SocioHeader title="Deportes del club" />
 
       <main className="max-w-3xl w-full mx-auto px-4 py-8 flex-1 space-y-6">
-        <div className="relative">
-          <svg
-            xmlns={SVG_XMLNS}
-            className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"
-            />
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar deporte..."
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar deporte..."
+        />
 
         {loading && <p className="text-center text-gray-500 py-16">Cargando deportes...</p>}
         {error && !loading && <p className="text-center text-red-600 py-16">{error}</p>}

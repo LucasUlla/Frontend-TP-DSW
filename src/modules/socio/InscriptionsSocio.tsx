@@ -3,24 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../auth/authStore'
 import { getInscriptionsByClient, deleteInscription } from './socio.api'
 import { getApiErrorMessage } from '../../shared/lib/api.Error'
-import { capitalize, formatSchedule } from '../../shared/lib/formatters'
-import { SVG_XMLNS } from '../../shared/constants'
-import type { Inscription } from '../../shared/types'
+import SocioHeader from '../../shared/components/SocioHeader'
+import ErrorBanner from '../../shared/components/ErrorBanner'
+import CourseCard from './components/CourseCard'
+import type { Course, Inscription } from '../../shared/types'
 
 export default function InscriptionsSocio() {
   const navigate = useNavigate()
-  const { client, logout } = useAuthStore()
+  const { client } = useAuthStore()
 
   const [inscriptions, setInscriptions] = useState<Inscription[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<number | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
 
   useEffect(() => {
     if (!client?.id) return
@@ -44,13 +40,13 @@ export default function InscriptionsSocio() {
     }
   }, [client?.id])
 
-  const handleDesinscribirse = async (courseId: number) => {
+  const handleDesinscribirse = async (course: Course) => {
     if (!client?.id) return
-    setActionLoading(courseId)
+    setActionLoading(course.id)
     setActionError(null)
     try {
-      await deleteInscription(courseId, client.id)
-      setInscriptions((prev) => prev.filter((i) => i.course?.id !== courseId))
+      await deleteInscription(course.id, client.id)
+      setInscriptions((prev) => prev.filter((i) => i.course?.id !== course.id))
     } catch (err) {
       setActionError(getApiErrorMessage(err, 'No se pudo cancelar la inscripción.'))
     } finally {
@@ -60,40 +56,10 @@ export default function InscriptionsSocio() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-blue-600 text-white shadow-sm px-6 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate('/socio')}
-          className="flex items-center gap-2 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition"
-          title="Volver al menú principal"
-        >
-          <svg xmlns={SVG_XMLNS} className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-          </svg>
-          <span className="font-semibold text-sm hidden sm:inline">Menú Socio</span>
-        </button>
-
-        <span className="font-semibold text-lg tracking-wide">Mis inscripciones</span>
-
-        <button
-          onClick={handleLogout}
-          className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1.5 rounded-md transition"
-        >
-          Cerrar sesión
-        </button>
-      </header>
+      <SocioHeader title="Mis inscripciones" />
 
       <main className="max-w-3xl w-full mx-auto px-4 py-8 flex-1 space-y-4">
-        {actionError && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl flex items-center justify-between shadow-xs">
-            <span>{actionError}</span>
-            <button
-              onClick={() => setActionError(null)}
-              className="text-red-700 hover:text-red-900 font-bold ml-4 shrink-0"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <ErrorBanner message={actionError} onClose={() => setActionError(null)} />
 
         {loading && <p className="text-center text-gray-500 py-16">Cargando tus inscripciones...</p>}
         {error && !loading && <p className="text-center text-red-600 py-16">{error}</p>}
@@ -113,50 +79,18 @@ export default function InscriptionsSocio() {
         {!loading &&
           !error &&
           inscriptions.map((insc) => {
-            const { course } = insc
-            if (!course) return null
-            const isActing = actionLoading === course.id
-            const sportName = course.sport?.name ? capitalize(course.sport.name) : 'Curso'
-
+            if (!insc.course) return null
             return (
-              <div
-                key={course.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 flex items-center justify-between gap-4 shadow-sm"
-              >
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">
-                      {sportName}
-                    </span>
-                    <p className="font-semibold text-gray-900 text-base">
-                      Turno #{course.course_no}
-                    </p>
-                  </div>
-
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Horario:</span>{' '}
-                    {formatSchedule(course.days, course.start_time, course.end_time)}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Profesor/a:</span> {course.professor}
-                  </p>
-                  {insc.insc_date && (
-                    <p className="text-xs text-gray-400">
-                      Inscripto el: {new Date(insc.insc_date).toLocaleDateString('es-AR')}
-                    </p>
-                  )}
-                </div>
-
-                <div className="shrink-0">
-                  <button
-                    onClick={() => handleDesinscribirse(course.id)}
-                    disabled={isActing}
-                    className="text-sm font-semibold px-4 py-2 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition disabled:opacity-50"
-                  >
-                    {isActing ? '...' : 'Salir'}
-                  </button>
-                </div>
-              </div>
+              <CourseCard
+                key={insc.course.id}
+                course={insc.course}
+                isInscribed={true}
+                isActing={actionLoading === insc.course.id}
+                showQuota={false}
+                showSportBadge={true}
+                inscDate={insc.insc_date}
+                onUnsubscribe={handleDesinscribirse}
+              />
             )
           })}
       </main>
