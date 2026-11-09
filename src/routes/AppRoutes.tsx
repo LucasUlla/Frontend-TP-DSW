@@ -6,6 +6,8 @@ import MenuAdmin from '../modules/menu/MenuAdmin.tsx'
 import MenuSocio from '../modules/menu/MenuSocio.tsx'
 import ProfileSocio from '../modules/socio/ProfileSocio.tsx'
 import SportsSocio from '../modules/socio/SportsSocio.tsx'
+import CoursesSocio from '../modules/socio/CoursesSocio.tsx'
+import InscriptionsSocio from '../modules/socio/InscriptionsSocio.tsx'
 import ListaClientes from '../modules/admin/ListaClientes.tsx'
 import SportsAdmin from '../modules/admin/SportsAdmin.tsx'
 import CoursesAdmin from '../modules/admin/CoursesAdmin.tsx'
@@ -21,6 +23,8 @@ export default function AppRoutes() {
         <Route path="/socio" element={<MenuSocio />} />
         <Route path="/socio/profile" element={<ProfileSocio />} />
         <Route path="/socio/sports" element={<SportsSocio />} />
+        <Route path="/socio/courses" element={<CoursesSocio />} />
+        <Route path="/socio/inscriptions" element={<InscriptionsSocio />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>
