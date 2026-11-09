@@ -1,5 +1,12 @@
 import api from '../../shared/lib/axios'
-import type { ApiResponse, Client, Sport, Course, Weekday, Inscription } from '../../shared/types'
+import type {
+  ApiResponse,
+  Client,
+  Sport,
+  Course,
+  CoursePayload,
+  Inscription,
+} from '../../shared/types'
 
 export const getClients = (params?: { name?: string; doc?: string }) =>
   api.get<ApiResponse<Client[]>>('/clients', { params })
@@ -26,19 +33,7 @@ export const updateSport = (id: number, data: { name: string }) =>
 export const deleteSport = (id: number) =>
   api.delete<ApiResponse<null>>(`/sports/${id}`)
 
-// Courses
-export interface CoursePayload {
-  course_no: number
-  days: Weekday[]
-  start_time: string
-  end_time: string
-  professor: string
-  start_date: string
-  finish_date: string
-  quota: number
-  sport: number
-}//Lo podriamos mover este asi quedan solo las peticiones a la api
-
+// Cursos / Dictados
 export const getCourses = (sportId?: number) =>
   api.get<ApiResponse<Course[]>>('/courses', {
     params: sportId ? { sportId } : undefined,
@@ -56,7 +51,7 @@ export const updateCourse = (id: number, data: CoursePayload) =>
 export const deleteCourse = (id: number) =>
   api.delete<ApiResponse<null>>(`/courses/${id}`)
 
-
+// Inscripciones
 export const getInscriptions = (params?: { courseId?: number; clientId?: number }) =>
   api.get<ApiResponse<Inscription[]>>('/inscriptions', { params })
 

@@ -1,30 +1,20 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
-import { useAuthStore } from '../auth/authStore'
 import { getSports, createSport, updateSport, deleteSport } from './admin.api'
 import { getApiErrorMessage } from '../../shared/lib/api.Error'
 import { capitalize } from '../../shared/lib/formatters'
 import { SVG_XMLNS } from '../../shared/constants'
+import AdminHeader from '../../shared/components/AdminHeader'
+import SuccessBanner from '../../shared/components/SucessBanner'
+import ConfirmModal from '../../shared/components/ConfirmModal'
+import {
+  AdminLoadingState,
+  AdminErrorState,
+  AdminEmptyState,
+} from '../../shared/components/AdminStatusStates'
+import SportFormModal from './components/SportFormModal'
 import type { Sport } from '../../shared/types'
-import ConfirmModal from '../../shared/components/ConfirmModal.tsx'
-
-interface SportFormData {
-  name: string
-}
-
-function parseSportErrorMessage(err: unknown, fallback: string): string {
-  const msg = getApiErrorMessage(err, fallback)
-  if (msg.toLowerCase().includes('duplicate entry')) {
-    return 'Ya existe un deporte con ese nombre.'
-  }
-  return msg
-}
 
 export default function SportsAdmin() {
-  const navigate = useNavigate()
-  const { logout } = useAuthStore()
-
   const [sports, setSports] = useState<Sport[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -35,32 +25,8 @@ export default function SportsAdmin() {
   const [deleteTarget, setDeleteTarget] = useState<Sport | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const {
-    register: registerCreate,
-    handleSubmit: handleSubmitCreate,
-    reset: resetCreate,
-    formState: { errors: errorsCreate, isSubmitting: isSubmittingCreate },
-    setError: setErrorCreate,
-  } = useForm<SportFormData>()
-
-  const {
-    register: registerEdit,
-    handleSubmit: handleSubmitEdit,
-    reset: resetEdit,
-    setValue: setValueEdit,
-    formState: { errors: errorsEdit, isSubmitting: isSubmittingEdit },
-    setError: setErrorEdit,
-  } = useForm<SportFormData>()
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
-  // Usado por el botón "Reintentar"
   const fetchSports = () => {
     setLoading(true)
     setError(null)
@@ -70,26 +36,24 @@ export default function SportsAdmin() {
       .finally(() => setLoading(false))
   }
 
-  // Carga inicial — lógica inline en el efecto
-
   useEffect(() => {
-  let ignore = false
+    let ignore = false
 
-  getSports()
-    .then((res) => {
-      if (!ignore) setSports(res.data.data || [])
-    })
-    .catch((err) => {
-      if (!ignore) setError(getApiErrorMessage(err, 'No se pudieron cargar los deportes.'))
-    })
-    .finally(() => {
-      if (!ignore) setLoading(false)
-    })
+    getSports()
+      .then((res) => {
+        if (!ignore) setSports(res.data.data || [])
+      })
+      .catch((err) => {
+        if (!ignore) setError(getApiErrorMessage(err, 'No se pudieron cargar los deportes.'))
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false)
+      })
 
-  return () => {
-    ignore = true
-  }
-}, [])
+    return () => {
+      ignore = true
+    }
+  }, [])
 
   const filteredSports = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -97,42 +61,21 @@ export default function SportsAdmin() {
     return sports.filter((s) => s.name.toLowerCase().includes(query))
   }, [sports, search])
 
-  const onSubmitCreate = async (data: SportFormData) => {
-    try {
-      const trimmedName = data.name.trim()
-      const res = await createSport({ name: trimmedName })
-      const newSport = res.data.data
-      setSports((prev) => [...prev, newSport])
-      setIsCreateOpen(false)
-      resetCreate()
-      setSuccessMessage(`El deporte "${capitalize(newSport.name)}" fue creado con éxito.`)
-      setTimeout(() => setSuccessMessage(null), 4000)
-    } catch (err) {
-      const msg = parseSportErrorMessage(err, 'Error al crear el deporte.')
-      setErrorCreate('name', { type: 'server', message: msg })
-    }
-  }
-
-  const handleOpenEdit = (sport: Sport) => {
-    setEditingSport(sport)
-    setValueEdit('name', sport.name)
-  }
-
-  const onSubmitEdit = async (data: SportFormData) => {
-    if (!editingSport) return
-    try {
-      const trimmedName = data.name.trim()
-      const res = await updateSport(editingSport.id, { name: trimmedName })
+  const handleSubmitSport = async (name: string) => {
+    if (editingSport) {
+      const res = await updateSport(editingSport.id, { name })
       const updated = res.data.data
       setSports((prev) => prev.map((s) => (s.id === editingSport.id ? updated : s)))
       setEditingSport(null)
-      resetEdit()
       setSuccessMessage(`El deporte "${capitalize(updated.name)}" fue actualizado con éxito.`)
-      setTimeout(() => setSuccessMessage(null), 4000)
-    } catch (err) {
-      const msg = parseSportErrorMessage(err, 'Error al actualizar el deporte.')
-      setErrorEdit('name', { type: 'server', message: msg })
+    } else {
+      const res = await createSport({ name })
+      const newSport = res.data.data
+      setSports((prev) => [...prev, newSport])
+      setIsCreateOpen(false)
+      setSuccessMessage(`El deporte "${capitalize(newSport.name)}" fue creado con éxito.`)
     }
+    setTimeout(() => setSuccessMessage(null), 4000)
   }
 
   const handleDelete = async () => {
@@ -154,25 +97,7 @@ export default function SportsAdmin() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-blue-600 text-white shadow-sm px-6 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate('/admin')}
-          className="flex items-center gap-2 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition"
-          title="Volver al panel de administración"
-        >
-          <svg xmlns={SVG_XMLNS} className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-          </svg>
-          <span className="font-semibold text-sm hidden sm:inline">Menú Admin</span>
-        </button>
-
-        <button
-          onClick={handleLogout}
-          className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1.5 rounded-md transition"
-        >
-          Cerrar sesión
-        </button>
-      </header>
+      <AdminHeader />
 
       <main className="max-w-6xl w-full mx-auto px-4 lg:px-8 py-8 flex-1 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -191,13 +116,17 @@ export default function SportsAdmin() {
 
             <button
               type="button"
-              onClick={() => {
-                resetCreate()
-                setIsCreateOpen(true)
-              }}
+              onClick={() => setIsCreateOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 rounded-xl transition shadow-xs flex items-center gap-2 text-sm"
             >
-              <svg xmlns={SVG_XMLNS} className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                xmlns={SVG_XMLNS}
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
               <span>Nuevo Deporte</span>
@@ -205,17 +134,7 @@ export default function SportsAdmin() {
           </div>
         </div>
 
-        {successMessage && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3 rounded-xl flex items-center justify-between shadow-xs">
-            <span>{successMessage}</span>
-            <button
-              onClick={() => setSuccessMessage(null)}
-              className="text-emerald-700 hover:text-emerald-900 font-bold ml-4"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <SuccessBanner message={successMessage} onClose={() => setSuccessMessage(null)} />
 
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
           <div className="relative flex-1">
@@ -251,34 +170,18 @@ export default function SportsAdmin() {
           </div>
         </div>
 
-        {loading && (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-xs">
-            <p className="text-gray-500">Cargando lista de deportes...</p>
-          </div>
-        )}
-
-        {error && !loading && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-xl text-center shadow-xs">
-            <p className="font-semibold mb-2">Ocurrió un error</p>
-            <p className="text-sm">{error}</p>
-            <button
-              onClick={fetchSports}
-              className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition"
-            >
-              Reintentar
-            </button>
-          </div>
-        )}
+        {loading && <AdminLoadingState text="Cargando lista de deportes..." />}
+        {error && !loading && <AdminErrorState error={error} onRetry={fetchSports} />}
 
         {!loading && !error && filteredSports.length === 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-xs">
-            <p className="text-gray-500 font-medium">No se encontraron deportes</p>
-            <p className="text-gray-400 text-sm mt-1">
-              {search
+          <AdminEmptyState
+            title="No se encontraron deportes"
+            subtitle={
+              search
                 ? 'Probá con otro término de búsqueda.'
-                : 'Aún no hay deportes registrados. Hacé click en "Nuevo Deporte" para crear el primero.'}
-            </p>
-          </div>
+                : 'Aún no hay deportes registrados. Hacé click en "Nuevo Deporte" para crear el primero.'
+            }
+          />
         )}
 
         {!loading && !error && filteredSports.length > 0 && (
@@ -304,11 +207,9 @@ export default function SportsAdmin() {
                           <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">
                             {sport.name ? sport.name.charAt(0).toUpperCase() : '?'}
                           </div>
-                          <div>
-                            <span className="font-semibold text-gray-900 text-base">
-                              {capitalize(sport.name)}
-                            </span>
-                          </div>
+                          <span className="font-semibold text-gray-900 text-base">
+                            {capitalize(sport.name)}
+                          </span>
                         </div>
                       </td>
 
@@ -316,7 +217,7 @@ export default function SportsAdmin() {
                         <div className="inline-flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleOpenEdit(sport)}
+                            onClick={() => setEditingSport(sport)}
                             className="text-amber-700 hover:text-amber-900 font-medium text-xs bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-md transition"
                           >
                             Modificar
@@ -342,166 +243,24 @@ export default function SportsAdmin() {
 
             <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex items-center justify-between">
               <span>
-                Mostrando <strong>{filteredSports.length}</strong> de <strong>{sports.length}</strong> deportes
+                Mostrando <strong>{filteredSports.length}</strong> de{' '}
+                <strong>{sports.length}</strong> deportes
               </span>
             </div>
           </div>
         )}
       </main>
 
-      {/* Modal de Alta */}
-      {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
-                  +
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Alta de Deporte</h3>
-                  <p className="text-xs text-gray-500">Ingresá el nombre del nuevo deporte</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCreateOpen(false)
-                  resetCreate()
-                }}
-                className="text-gray-400 hover:text-gray-600 rounded-lg p-1.5 hover:bg-gray-100 transition"
-              >
-                ✕
-              </button>
-            </div>
+      <SportFormModal
+        isOpen={isCreateOpen || Boolean(editingSport)}
+        editingSport={editingSport}
+        onClose={() => {
+          setIsCreateOpen(false)
+          setEditingSport(null)
+        }}
+        onSubmitSport={handleSubmitSport}
+      />
 
-            <form onSubmit={handleSubmitCreate(onSubmitCreate)} className="space-y-4" noValidate>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre del deporte *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Fútbol, Tenis, Natación..."
-                  className={`w-full border rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 transition ${
-                    errorsCreate.name
-                      ? 'border-red-500 focus:ring-red-400'
-                      : 'border-gray-200 focus:ring-blue-500'
-                  }`}
-                  {...registerCreate('name', {
-                    required: 'El nombre es obligatorio',
-                    minLength: { value: 2, message: 'Debe tener al menos 2 caracteres' },
-                    maxLength: { value: 50, message: 'Máximo 50 caracteres' },
-                    validate: (value) =>
-                      value.trim().length > 0 || 'El nombre no puede estar vacío',
-                  })}
-                />
-                {errorsCreate.name && (
-                  <p className="text-red-600 text-xs mt-1">{errorsCreate.name.message}</p>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreateOpen(false)
-                    resetCreate()
-                  }}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-xl text-sm transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingCreate}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50"
-                >
-                  {isSubmittingCreate ? 'Creando...' : 'Crear Deporte'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Modificación */}
-      {editingSport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
-                  ✎
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">Modificar Deporte</h3>
-                  <p className="text-xs text-gray-500">ID #{editingSport.id}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingSport(null)
-                  resetEdit()
-                }}
-                className="text-gray-400 hover:text-gray-600 rounded-lg p-1.5 hover:bg-gray-100 transition"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="space-y-4" noValidate>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre del deporte *
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Básquet..."
-                  className={`w-full border rounded-lg px-3.5 py-2 text-sm focus:outline-none focus:ring-2 transition ${
-                    errorsEdit.name
-                      ? 'border-red-500 focus:ring-red-400'
-                      : 'border-gray-200 focus:ring-blue-500'
-                  }`}
-                  {...registerEdit('name', {
-                    required: 'El nombre es obligatorio',
-                    minLength: { value: 2, message: 'Debe tener al menos 2 caracteres' },
-                    maxLength: { value: 50, message: 'Máximo 50 caracteres' },
-                    validate: (value) =>
-                      value.trim().length > 0 || 'El nombre no puede estar vacío',
-                  })}
-                />
-                {errorsEdit.name && (
-                  <p className="text-red-600 text-xs mt-1">{errorsEdit.name.message}</p>
-                )}
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingSport(null)
-                    resetEdit()
-                  }}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-xl text-sm transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingEdit}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-xl text-sm transition disabled:opacity-50"
-                >
-                  {isSubmittingEdit ? 'Guardando...' : 'Guardar cambios'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Baja */}
       {deleteTarget && (
         <ConfirmModal
           title="Dar de baja deporte"
@@ -509,8 +268,9 @@ export default function SportsAdmin() {
           message={
             <>
               ¿Estás seguro de que querés eliminar el deporte{' '}
-              <strong className="text-gray-900">{capitalize(deleteTarget.name)}</strong> (ID #{deleteTarget.id})?
-              Esta acción no se puede deshacer y afectará a los cursos y precios asociados.
+              <strong className="text-gray-900">{capitalize(deleteTarget.name)}</strong> (ID #
+              {deleteTarget.id})? Esta acción no se puede deshacer y afectará a los cursos y precios
+              asociados.
             </>
           }
           loading={deleteLoading}

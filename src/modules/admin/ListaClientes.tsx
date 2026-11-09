@@ -1,27 +1,22 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../auth/authStore'
 import { getClients, deleteClient } from './admin.api'
 import { getApiErrorMessage } from '../../shared/lib/api.Error'
-import { capitalize } from '../../shared/lib/formatters'
+import { capitalize, formatDate } from '../../shared/lib/formatters'
 import { SVG_XMLNS } from '../../shared/constants'
+import AdminHeader from '../../shared/components/AdminHeader'
+import SuccessBanner from '../../shared/components/SucessBanner'
+import ConfirmModal from '../../shared/components/ConfirmModal'
+import {
+  AdminLoadingState,
+  AdminErrorState,
+  AdminEmptyState,
+} from '../../shared/components/AdminStatusStates'
+import ClientDetailModal from './components/ClientDetailModal'
 import type { Client, TypeUser } from '../../shared/types'
-import ConfirmModal from '../../shared/components/ConfirmModal.tsx'
-
-function formatDate(birthDateString?: string): string {
-  if (!birthDateString) return 'No registrada'
-  const parts = birthDateString.split('T')[0].split('-')
-  if (parts.length === 3) {
-    const [year, month, day] = parts
-    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`
-  }
-  const date = new Date(birthDateString)
-  return isNaN(date.getTime()) ? birthDateString : date.toLocaleDateString('es-AR')
-}
 
 export default function ListaClientes() {
-  const navigate = useNavigate()
-  const { client: currentAdmin, logout } = useAuthStore()
+  const { client: currentAdmin } = useAuthStore()
 
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
@@ -29,19 +24,12 @@ export default function ListaClientes() {
   const [search, setSearch] = useState('')
   const [selectedRole, setSelectedRole] = useState<'ALL' | TypeUser>('ALL')
 
-  // Modales
   const [viewClient, setViewClient] = useState<Client | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
-  // Usado por el botón "Reintentar" — dispara el fetch manualmente
   const fetchClients = () => {
     setLoading(true)
     setError(null)
@@ -51,34 +39,28 @@ export default function ListaClientes() {
       .finally(() => setLoading(false))
   }
 
-  // Carga inicial — lógica inline en el efecto, con cleanup para evitar setState
-  // en un componente ya desmontado
-
   useEffect(() => {
-  let ignore = false
+    let ignore = false
 
-  getClients()
-    .then((res) => {
-      if (!ignore) setClients(res.data.data || [])
-    })
-    .catch((err) => {
-      if (!ignore) setError(getApiErrorMessage(err, 'No se pudieron cargar los clientes.'))
-    })
-    .finally(() => {
-      if (!ignore) setLoading(false)
-    })
+    getClients()
+      .then((res) => {
+        if (!ignore) setClients(res.data.data || [])
+      })
+      .catch((err) => {
+        if (!ignore) setError(getApiErrorMessage(err, 'No se pudieron cargar los clientes.'))
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false)
+      })
 
-  return () => {
-    ignore = true
-  }
-}, [])
+    return () => {
+      ignore = true
+    }
+  }, [])
 
-  // Filtrar clientes por búsqueda y rol
   const filteredClients = useMemo(() => {
     return clients.filter((c) => {
-      const matchesRole =
-        selectedRole === 'ALL' ? true : c.type_user === selectedRole
-
+      const matchesRole = selectedRole === 'ALL' ? true : c.type_user === selectedRole
       const query = search.trim().toLowerCase()
       if (!query) return matchesRole
 
@@ -91,7 +73,6 @@ export default function ListaClientes() {
     })
   }, [clients, search, selectedRole])
 
-  // Contadores para resumen
   const totalCount = clients.length
   const socioCount = useMemo(
     () => clients.filter((c) => c.type_user === 'Socio').length,
@@ -109,7 +90,9 @@ export default function ListaClientes() {
     try {
       await deleteClient(deleteTarget.id)
       setClients((prev) => prev.filter((c) => c.id !== deleteTarget.id))
-      setSuccessMessage(`El cliente ${capitalize(deleteTarget.name)} ${capitalize(deleteTarget.surname)} fue eliminado correctamente.`)
+      setSuccessMessage(
+        `El cliente ${capitalize(deleteTarget.name)} ${capitalize(deleteTarget.surname)} fue eliminado correctamente.`
+      )
       setDeleteTarget(null)
       setTimeout(() => setSuccessMessage(null), 4000)
     } catch (err) {
@@ -121,30 +104,9 @@ export default function ListaClientes() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header institucional consistente */}
-      <header className="bg-blue-600 text-white shadow-sm px-6 h-14 flex items-center justify-between">
-        <button
-          onClick={() => navigate('/admin')}
-          className="flex items-center gap-2 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition"
-          title="Volver al panel de administración"
-        >
-          <svg xmlns={SVG_XMLNS} className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-          </svg>
-          <span className="font-semibold text-sm hidden sm:inline">Menú Admin</span>
-        </button>
+      <AdminHeader />
 
-        <button
-          onClick={handleLogout}
-          className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white font-medium px-3 py-1.5 rounded-md transition"
-        >
-          Cerrar sesión
-        </button>
-      </header>
-
-      {/* Contenido principal */}
       <main className="max-w-6xl w-full mx-auto px-4 lg:px-8 py-8 flex-1 space-y-6">
-        {/* Título y estadísticas rápidas */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Lista de Clientes</h1>
@@ -169,20 +131,8 @@ export default function ListaClientes() {
           </div>
         </div>
 
-        {/* Mensaje de éxito al eliminar */}
-        {successMessage && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm px-4 py-3 rounded-xl flex items-center justify-between shadow-xs">
-            <span>{successMessage}</span>
-            <button
-              onClick={() => setSuccessMessage(null)}
-              className="text-emerald-700 hover:text-emerald-900 font-bold ml-4"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        <SuccessBanner message={successMessage} onClose={() => setSuccessMessage(null)} />
 
-        {/* Barra de Filtros y Búsqueda */}
         <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
           <div className="relative flex-1">
             <svg
@@ -253,38 +203,20 @@ export default function ListaClientes() {
           </div>
         </div>
 
-        {/* Estados: Loading, Error, Vacío */}
-        {loading && (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-xs">
-            <p className="text-gray-500">Cargando lista de clientes...</p>
-          </div>
-        )}
-
-        {error && !loading && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-xl text-center shadow-xs">
-            <p className="font-semibold mb-2">Ocurrió un error</p>
-            <p className="text-sm">{error}</p>
-            <button
-              onClick={fetchClients}
-              className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition"
-            >
-              Reintentar
-            </button>
-          </div>
-        )}
+        {loading && <AdminLoadingState text="Cargando lista de clientes..." />}
+        {error && !loading && <AdminErrorState error={error} onRetry={fetchClients} />}
 
         {!loading && !error && filteredClients.length === 0 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-xs">
-            <p className="text-gray-500 font-medium">No se encontraron clientes</p>
-            <p className="text-gray-400 text-sm mt-1">
-              {search
+          <AdminEmptyState
+            title="No se encontraron clientes"
+            subtitle={
+              search
                 ? 'Probá ajustando los términos de búsqueda o el filtro de rol.'
-                : 'No hay clientes registrados en el sistema.'}
-            </p>
-          </div>
+                : 'No hay clientes registrados en el sistema.'
+            }
+          />
         )}
 
-        {/* Tabla de Clientes */}
         {!loading && !error && filteredClients.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
@@ -328,7 +260,7 @@ export default function ListaClientes() {
                         </td>
 
                         <td className="px-6 py-4 text-xs sm:text-sm">
-                          {formatDate(client.birth_date)}
+                          {formatDate(client.birth_date, 'No registrada')}
                         </td>
 
                         <td className="px-6 py-4">
@@ -384,101 +316,38 @@ export default function ListaClientes() {
 
             <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex items-center justify-between">
               <span>
-                Mostrando <strong>{filteredClients.length}</strong> de <strong>{totalCount}</strong> clientes
+                Mostrando <strong>{filteredClients.length}</strong> de{' '}
+                <strong>{totalCount}</strong> clientes
               </span>
             </div>
           </div>
         )}
       </main>
 
-      {/* Modal de Detalle de Cliente */}
-      {viewClient && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 w-full max-w-md p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-base">
-                  {viewClient.name ? viewClient.name.charAt(0).toUpperCase() : '?'}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900">
-                    {capitalize(viewClient.name)} {capitalize(viewClient.surname)}
-                  </h3>
-                  <span
-                    className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-full mt-0.5 ${
-                      viewClient.type_user === 'Admin'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-blue-100 text-blue-800'
-                    }`}
-                  >
-                    {viewClient.type_user === 'Admin' ? 'Administrador' : 'Socio'}
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewClient(null)}
-                className="text-gray-400 hover:text-gray-600 rounded-lg p-1.5 hover:bg-gray-100 transition"
-              >
-                ✕
-              </button>
-            </div>
+      <ClientDetailModal client={viewClient} onClose={() => setViewClient(null)} />
 
-            <div className="space-y-3.5 text-sm">
-              <div className="flex justify-between py-1.5 border-b border-gray-100">
-                <span className="text-gray-500">ID de Sistema</span>
-                <span className="font-mono font-medium text-gray-800">{viewClient.id}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-gray-100">
-                <span className="text-gray-500">DNI</span>
-                <span className="font-mono font-medium text-gray-800">{viewClient.doc || '—'}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-gray-100">
-                <span className="text-gray-500">Email</span>
-                <span className="font-medium text-gray-800 break-all">{viewClient.email}</span>
-              </div>
-              <div className="flex justify-between py-1.5 border-b border-gray-100">
-                <span className="text-gray-500">Fecha de Nacimiento</span>
-                <span className="font-medium text-gray-800">{formatDate(viewClient.birth_date)}</span>
-              </div>
-            </div>
-
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setViewClient(null)}
-                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2.5 rounded-xl text-sm transition"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal de Confirmación de Eliminación */}
       {deleteTarget && (
-      <ConfirmModal
-        title="Confirmar eliminación"
-        message={
-          <>
-            ¿Estás seguro de que querés eliminar al cliente{' '}
-            <strong className="text-gray-900">
-              {capitalize(deleteTarget.name)} {capitalize(deleteTarget.surname)}
-            </strong>{' '}
-            (DNI: {deleteTarget.doc})? Esta acción eliminará permanentemente sus datos,
-            cuotas e inscripciones asociadas.
-          </>
-        }
-        loading={deleteLoading}
-        error={deleteError}
-        onConfirm={handleDelete}
-        onCancel={() => {
-          setDeleteTarget(null)
-          setDeleteError(null)
-        }}
-      />
-    )}
+        <ConfirmModal
+          title="Confirmar eliminación"
+          message={
+            <>
+              ¿Estás seguro de que querés eliminar al cliente{' '}
+              <strong className="text-gray-900">
+                {capitalize(deleteTarget.name)} {capitalize(deleteTarget.surname)}
+              </strong>{' '}
+              (DNI: {deleteTarget.doc})? Esta acción eliminará permanentemente sus datos, cuotas e
+              inscripciones asociadas.
+            </>
+          }
+          loading={deleteLoading}
+          error={deleteError}
+          onConfirm={handleDelete}
+          onCancel={() => {
+            setDeleteTarget(null)
+            setDeleteError(null)
+          }}
+        />
+      )}
     </div>
   )
 }

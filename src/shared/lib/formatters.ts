@@ -17,3 +17,13 @@ export function formatSchedule(days: string[], startTime: string, endTime: strin
   return `${days.join(' y ')} de ${startTime} a ${endTime}`
 }
 
+export function formatDate(dateString?: string, fallback = '—'): string {
+  if (!dateString) return fallback
+  const parts = dateString.split('T')[0].split('-')
+  if (parts.length === 3) {
+    const [year, month, day] = parts
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`
+  }
+  const date = new Date(dateString)
+  return isNaN(date.getTime()) ? dateString : date.toLocaleDateString('es-AR')
+}

@@ -1,4 +1,5 @@
 export type TypeUser = 'Admin' | 'Socio'
+
 export const WEEKDAYS = [
   'Lunes',
   'Martes',
@@ -10,6 +11,7 @@ export const WEEKDAYS = [
 ] as const
 
 export type Weekday = (typeof WEEKDAYS)[number]
+
 export interface Client {
   id: number
   name: string
@@ -38,7 +40,19 @@ export interface Course {
   finish_date: string
   quota: number
   sport?: Sport
-  inscriptionsCount: number //Por ahora solo viene en el getAllCourses
+  inscriptionsCount: number
+}
+
+export interface CoursePayload {
+  course_no: number
+  days: Weekday[]
+  start_time: string
+  end_time: string
+  professor: string
+  start_date: string
+  finish_date: string
+  quota: number
+  sport: number
 }
 
 export interface Inscription {
